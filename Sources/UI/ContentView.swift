@@ -451,35 +451,103 @@ struct ToolbarBar: View {
 
 // MARK: - Tabs
 
+/// The tab bar under the toolbar.
+///
+/// Custom buttons, not a native `TabView`, so the system does not glassify them
+/// on macOS 26+ — the glass has to be requested. Wrapping the strip in a
+/// `GlassEffectContainer` and giving the selected segment an id in a shared
+/// namespace makes one pane of glass slide between tabs, which is what a
+/// native Liquid Glass tab bar does. Older systems keep the flat fill.
 struct TabStrip: View {
     @EnvironmentObject private var vm: PkgViewModel
     @EnvironmentObject private var l10n: L10n
+    /// Shared by every segment so the glass can morph rather than cross-fade.
+    @Namespace private var glassNS
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(PkgViewModel.Tab.allCases) { tab in
-                let active = vm.selectedTab == tab
-                Button {
-                    vm.selectedTab = tab
-                    if tab == .trophies { vm.loadTrophiesIfNeeded() }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: icon(tab)).font(.system(size: 11))
-                        Text(l10n.t(tab.titleKey))
-                            .font(.system(size: 12, weight: active ? .semibold : .regular))
+        glassStrip
+    }
+
+    private var tabs: [PkgViewModel.Tab] { PkgViewModel.Tab.allCases }
+
+    private func select(_ tab: PkgViewModel.Tab) {
+        vm.selectedTab = tab
+        if tab == .trophies { vm.loadTrophiesIfNeeded() }
+    }
+
+    // MARK: Liquid Glass (macOS 26+)
+
+    /// The container wraps the *whole* strip, not each segment.
+    ///
+    /// That scope is the point: `glassEffectID` resolves against the nearest
+    /// enclosing container, so a container per button would give every segment
+    /// its own private glass and the morph would have nothing to travel across.
+    /// One container for the group is what makes a single pane slide between
+    /// tabs.
+    ///
+    /// The `#available` check has to enclose the *construction expression*
+    /// itself. Guarding only the call site is not enough, and neither is
+    /// erasing to `AnyView`: the checker looks at where `GlassEffectContainer`
+    /// is written, so the whole build of that value lives inside the `if`.
+    @ViewBuilder
+    private var glassStrip: some View {
+        if #available(macOS 26.0, *) {
+            GlassEffectContainer(spacing: 4) {
+                HStack(spacing: 4) {
+                    ForEach(Array(tabs.enumerated()), id: \.element) { index, tab in
+                        segment(tab, index: index, glass: true)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(active ? Theme.panelHi : Color.clear, in: RoundedRectangle(cornerRadius: 6))
-                    .foregroundStyle(active ? Color.white : Theme.textDim)
+                    Spacer()
                 }
-                .buttonStyle(.plain)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+            }
+            .background(Mat.bar)
+        } else {
+            plainStrip
+        }
+    }
+
+    // MARK: Flat fallback (macOS 14–15)
+
+    private var plainStrip: some View {
+        HStack(spacing: 4) {
+            ForEach(Array(tabs.enumerated()), id: \.element) { index, tab in
+                segment(tab, index: index, glass: false)
             }
             Spacer()
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Theme.bg)
+        .background(Mat.bar)
+    }
+
+    @ViewBuilder
+    private func segment(_ tab: PkgViewModel.Tab, index: Int, glass: Bool) -> some View {
+        let active = vm.selectedTab == tab
+        let label = HStack(spacing: 5) {
+            Image(systemName: icon(tab)).font(.system(size: 11))
+            Text(l10n.t(tab.titleKey))
+                .font(.system(size: 12, weight: active ? .semibold : .regular))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        // The glass supplies its own contrast, so the label is the plain label
+        // colour in both appearances — the white this used to use is invisible
+        // on a light glass pane.
+        .foregroundStyle(active ? Theme.text : Theme.textDim)
+        .contentShape(Rectangle())
+
+        Button { select(tab) } label: {
+            if glass {
+                label.glassSegment(isSelected: active, id: index,
+                                   namespace: glassNS, cornerRadius: 7)
+            } else {
+                label.background(active ? Theme.panelHi : Color.clear,
+                                 in: RoundedRectangle(cornerRadius: 7))
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private func icon(_ t: PkgViewModel.Tab) -> String {

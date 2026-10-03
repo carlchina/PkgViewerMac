@@ -80,6 +80,32 @@ extension View {
         glassIfAvailable(in: .rect(cornerRadius: cornerRadius))
     }
 
+    /// Liquid Glass bound to a shared namespace, so the glass *morphs* between
+    /// segments instead of cross-fading.
+    ///
+    /// This is what makes a segmented control feel like the system tab bar:
+    /// a single pane of glass slides from one segment to the next, carrying
+    /// its highlight with it. Passing an id only for the selected segment is
+    /// what drives that — the others get `nil` so they are not part of the
+    /// morph.
+    ///
+    /// Both the modifier and the `Glass` value are 26+, hence the wrapper.
+    @ViewBuilder
+    func glassSegment(
+        isSelected: Bool,
+        id: Int,
+        namespace: Namespace.ID,
+        cornerRadius: CGFloat
+    ) -> some View {
+        if #available(macOS 26.0, *) {
+            self
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+                .glassEffectID(isSelected ? id : nil, in: namespace)
+        } else {
+            self
+        }
+    }
+
     /// The material backing for a panel, honouring the system appearance.
     func panelSurface(cornerRadius: CGFloat = 10) -> some View {
         background(Mat.panel, in: RoundedRectangle(cornerRadius: cornerRadius))
