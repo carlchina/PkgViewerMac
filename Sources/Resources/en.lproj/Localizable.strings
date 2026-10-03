@@ -1,0 +1,223 @@
+/* PKG Viewer — English (base)
+   Keys are the lookup ids used in the UI. Keep this file complete: it is the
+   fallback for every other language. */
+
+/* MARK: - App chrome */
+"app.name" = "PKG Viewer";
+"app.open" = "Open";
+"app.openPanel.message" = "Choose a PS3/PS4/PS5 package, disk image, or game folder";
+"app.rename" = "Rename";
+"app.copyInfo" = "Copy Info";
+
+/* MARK: - Tabs */
+"tab.overview" = "Overview";
+"tab.files" = "Files";
+"tab.trophies" = "Trophies";
+"tab.details" = "Details";
+
+/* MARK: - Drop pane */
+"drop.title" = "Drop a PS3 / PS4 / PS5 package here";
+"drop.formats" = ".pkg · .exfat · .ffpfsc · .ffpkg · or a game folder";
+"drop.blurb" = "Cover art, title, Title ID, region, version and required firmware — read straight from the container, nothing is extracted.";
+
+/* MARK: - Loading / errors */
+"loading.reading" = "Reading package…";
+"error.title" = "Cannot read this file";
+"error.chooseAnother" = "Choose another file…";
+
+/* MARK: - Overview */
+"overview.save" = "Save";
+"overview.copy" = "Copy";
+"overview.noCover" = "No cover art";
+"overview.logo" = "Publisher logo";
+"overview.spec" = "SPEC";
+"overview.galleryNote" = "%d image(s) found in sce_sys — click a thumbnail to swap.";
+
+/* MARK: - Files */
+"files.filter" = "Filter by name";
+"files.count" = "%d of %d";
+"files.noMatch" = "No matching files";
+"files.selectOne" = "Select a file";
+"files.save" = "Save";
+"files.moreBytes" = "… %d more bytes";
+
+/* MARK: - File detail rows */
+"detail.name" = "Name";
+"detail.size" = "Size";
+"detail.id" = "ID";
+"detail.codec" = "Codec";
+"detail.type" = "Type";
+"detail.trophyPack" = "Trophy pack";
+
+/* MARK: - Trophies */
+"trophy.section" = "TROPHIES (%d)";
+"trophy.icons" = "ICONS & BANNERS (%d)";
+"trophy.none" = "This package has no trophy data.";
+"trophy.grade.platinum" = "Platinum";
+"trophy.grade.gold" = "Gold";
+"trophy.grade.silver" = "Silver";
+"trophy.grade.bronze" = "Bronze";
+"trophy.grade.unknown" = "—";
+
+/* MARK: - Details */
+"details.showAll" = "Show all fields";
+"details.filterKeys" = "Filter keys";
+"details.fieldCount" = "%d fields";
+"details.none" = "No metadata found";
+"details.nestedFields" = "{ %d fields }";
+
+/* MARK: - Rename sheet */
+"rename.title" = "Rename";
+"rename.include" = "INCLUDE IN NAME";
+"rename.part.title" = "Title";
+"rename.part.tid" = "Title ID";
+"rename.part.version" = "Version";
+"rename.part.region" = "Region";
+"rename.custom" = "Custom name";
+"rename.customPlaceholder" = "Custom name";
+"rename.preview" = "PREVIEW";
+"rename.cancel" = "Cancel";
+"rename.confirm" = "Rename";
+"rename.err.unchanged" = "The name is unchanged.";
+"rename.err.exists" = "A file named %@ already exists.";
+
+/* MARK: - Language menu */
+"lang.menu" = "Language";
+"lang.system" = "System (%@)";
+"lang.follow" = "Follow System";
+
+/* MARK: - Metadata labels (spec card) */
+"meta.platform" = "Platform";
+"meta.package" = "Package";
+"meta.signature" = "Signature";
+"meta.size" = "Size";
+"meta.pfsImage" = "PFS image";
+"meta.entries" = "Entries";
+"meta.titleId" = "Title ID";
+"meta.contentId" = "Content ID";
+"meta.region" = "Region";
+"meta.type" = "Type";
+"meta.contentVer" = "Content Ver";
+"meta.masterVer" = "Master Ver";
+"meta.conceptId" = "Concept ID";
+"meta.minSystem" = "Min. System";
+"meta.drm" = "DRM";
+"meta.sdk" = "SDK";
+"meta.version" = "Version";
+"meta.baseVersion" = "Base Version";
+"meta.languages" = "Languages";
+"meta.built" = "Built";
+"meta.passcode" = "Passcode";
+"meta.assets" = "Assets";
+"meta.note" = "Note";
+"meta.innerFile" = "Inner file";
+
+/* MARK: - Trophy status messages */
+"trophy.msg.none" = "No trophy pack found in this package.";
+"trophy.msg.reading" = "Reading %@…";
+"trophy.msg.unreadable" = "Could not read %@.";
+"trophy.msg.badUCP" = "%@ is not a readable UCP archive.";
+"trophy.msg.noTropmeta" = "%@ has %d files but no tropmeta JSON.";
+"trophy.msg.encrypted" = "The trophy list in %@ is encrypted; the title's NPcommID could not be determined.";
+"trophy.msg.badTRP" = "%@ is not a readable trophy pack.";
+"trophy.msg.noESFM" = "No TROP.ESFM inside %@.";
+
+/* MARK: - Errors */
+"err.notFound" = "File not found";
+"err.cannotOpen" = "Cannot open file";
+"err.cannotRead" = "Cannot read file";
+"err.cannotReadHeader" = "Cannot read the package header";
+"err.unknownMagic" = "Unrecognised file format (magic %@)";
+"err.noCNT" = "No CNT container found — this looks like an encrypted retail stub.";
+"err.badExfat" = "Not a valid exFAT image";
+"err.ffpfscUnsupported" = "ffpfsc needs the mkpfs decompressor — not bundled in this build";
+"err.ffpkgUnsupported" = "ffpkg (UFS2) support is not available in this build";
+"err.ps3TooSmall" = "Too small for a PS3 PKG";
+"err.ps3NotNpDrm" = "Not a PS3 NPDRM package (type %@)";
+
+/* MARK: - Screenshot */
+"app.screenshot" = "Screenshot";
+"app.screenshotHelp" = "Save the current window as a PNG image";
+"shot.saveMessage" = "Save the current window as a PNG image.";
+"shot.savePrompt" = "Save";
+"shot.failed" = "The window could not be captured.";
+"shot.saveFailed" = "The image could not be saved: %@";
+"alert.ok" = "OK";
+
+/* MARK: - Metadata values */
+"meta.sig.official" = "Official";
+"meta.sig.debug" = "Debug";
+"meta.drm.paid" = "Paid";
+"meta.drm.standard" = "Standard";
+"meta.passcode.zeros" = "Zeros (FPKG default)";
+
+/* MARK: - Trophies list */
+"trophy.col.id" = "ID";
+"trophy.col.grade" = "Grade";
+"trophy.col.name" = "Name";
+"trophy.hidden" = "Hidden";
+"trophy.noArt" = "No image for this trophy";
+"trophy.selectHint" = "Select a trophy to see its image";
+
+"trophy.header.count" = "%d trophies";
+"trophy.header.hidden" = "%d hidden";
+
+/* MARK: - Trophy locale */
+"trophy.locale.auto" = "Auto";
+"trophy.locale.help" = "Trophy names and descriptions come from the pack; pick which language to display";
+"locale.en-us" = "English (US)";
+"locale.en-gb" = "English (UK)";
+"locale.ja-jp" = "Japanese";
+"locale.ko-kr" = "Korean";
+"locale.zh-hans" = "Chinese (Simplified)";
+"locale.zh-hant" = "Chinese (Traditional)";
+"locale.ru-ru" = "Russian";
+"locale.ar-ae" = "Arabic";
+"locale.de-de" = "German";
+"locale.fr-fr" = "French (France)";
+"locale.fr-ca" = "French (Canada)";
+"locale.it-it" = "Italian";
+"locale.es-es" = "Spanish (Spain)";
+"locale.es-419" = "Spanish (Latin America)";
+"locale.pt-br" = "Portuguese (Brazil)";
+"locale.nl-nl" = "Dutch";
+"locale.pl-pl" = "Polish";
+"locale.da-dk" = "Danish";
+"locale.pt-pt" = "Portuguese (Portugal)";
+"locale.th-th" = "Thai";
+"locale.es-mx" = "Spanish (Mexico)";
+"locale.id-id" = "Indonesian";
+"locale.vi-vn" = "Vietnamese";
+"locale.uk-ua" = "Ukrainian";
+"locale.tr-tr" = "Turkish";
+"locale.cs-cz" = "Czech";
+"locale.hu-hu" = "Hungarian";
+"locale.ro-ro" = "Romanian";
+"locale.el-gr" = "Greek";
+"locale.he-il" = "Hebrew";
+"locale.hi-in" = "Hindi";
+
+/* MARK: - Empty trophy list */
+"trophy.list.empty" = "No trophy list in this language";
+"trophy.msg.searching" = "Searching for the trophy key…";
+
+/* MARK: - Icon export */
+"trophy.export.all" = "Save all";
+"trophy.export.saveOne" = "Save this image";
+"trophy.export.help.all" = "Save every image in this pack into a folder";
+"trophy.export.oneMessage" = "Choose where to save the image of trophy %@";
+"trophy.export.message" = "Choose a folder for the trophy images";
+"trophy.export.done" = "Exported %d images";
+"trophy.export.doneDetail" = "Saved into “%@”.";
+"trophy.export.partial" = "%d of them were written; %d could not be saved.";
+"trophy.export.failedTitle" = "Some images could not be saved";
+"trophy.export.reveal" = "Show in Finder";
+
+/* MARK: - About */
+"about.title" = "About PKG Viewer";
+"about.version" = "Version %@";
+"about.blurb" = "A native macOS reader for PlayStation packages.";
+"about.formats" = "Supports PS3 NPDRM, PS4 FPKG/CNT, PS5 FIH and exFAT images, plus bare UCP/TRP trophy archives.";
+"about.credit" = "Original: pkg-viewer by Loopayeh (MIT).";
+"about.portAuthor" = "macOS port by CarlChina.";
+"about.ok" = "OK";

@@ -1,0 +1,221 @@
+/* PKG Viewer — 日本語 */
+
+/* MARK: - アプリ */
+"app.name" = "PKG Viewer";
+"app.open" = "開く";
+"app.openPanel.message" = "PS3/PS4/PS5 パッケージ、ディスクイメージ、ゲームフォルダを選択";
+"app.rename" = "名前を変更";
+"app.copyInfo" = "情報をコピー";
+
+/* MARK: - タブ */
+"tab.overview" = "概要";
+"tab.files" = "ファイル";
+"tab.trophies" = "トロフィー";
+"tab.details" = "詳細";
+
+/* MARK: - ドロップ画面 */
+"drop.title" = "PS3 / PS4 / PS5 パッケージをここにドロップ";
+"drop.formats" = ".pkg · .exfat · .ffpfsc · .ffpkg · またはゲームフォルダ";
+"drop.blurb" = "カバー、タイトル、Title ID、地域、バージョン、必要ファームウェアをコンテナから直接読み取ります。展開は不要です。";
+
+/* MARK: - 読み込み / エラー */
+"loading.reading" = "パッケージを読み込み中…";
+"error.title" = "このファイルを読み取れません";
+"error.chooseAnother" = "別のファイルを選択…";
+
+/* MARK: - 概要 */
+"overview.save" = "保存";
+"overview.copy" = "コピー";
+"overview.noCover" = "カバーなし";
+"overview.logo" = "パブリッシャーロゴ";
+"overview.spec" = "仕様";
+"overview.galleryNote" = "sce_sys に %d 枚の画像があります — サムネイルで切り替えられます。";
+
+/* MARK: - ファイル */
+"files.filter" = "名前で絞り込み";
+"files.count" = "%d / %d";
+"files.noMatch" = "一致するファイルなし";
+"files.selectOne" = "ファイルを選択";
+"files.save" = "保存";
+"files.moreBytes" = "… 他 %d バイト";
+
+/* MARK: - ファイル詳細 */
+"detail.name" = "名前";
+"detail.size" = "サイズ";
+"detail.id" = "ID";
+"detail.codec" = "コーデック";
+"detail.type" = "種類";
+"detail.trophyPack" = "トロフィーパック";
+
+/* MARK: - トロフィー */
+"trophy.section" = "トロフィー（%d）";
+"trophy.icons" = "アイコンとバナー（%d）";
+"trophy.none" = "このパッケージにトロフィーデータはありません。";
+"trophy.grade.platinum" = "プラチナ";
+"trophy.grade.gold" = "ゴールド";
+"trophy.grade.silver" = "シルバー";
+"trophy.grade.bronze" = "ブロンズ";
+"trophy.grade.unknown" = "—";
+
+/* MARK: - 詳細 */
+"details.showAll" = "すべての項目を表示";
+"details.filterKeys" = "キーを絞り込み";
+"details.fieldCount" = "%d 項目";
+"details.none" = "メタデータがありません";
+"details.nestedFields" = "{ %d 項目 }";
+
+/* MARK: - 名前の変更 */
+"rename.title" = "名前を変更";
+"rename.include" = "名前に含める";
+"rename.part.title" = "タイトル";
+"rename.part.tid" = "Title ID";
+"rename.part.version" = "バージョン";
+"rename.part.region" = "地域";
+"rename.custom" = "カスタム名";
+"rename.customPlaceholder" = "カスタム名";
+"rename.preview" = "プレビュー";
+"rename.cancel" = "キャンセル";
+"rename.confirm" = "名前を変更";
+"rename.err.unchanged" = "名前が変更されていません。";
+"rename.err.exists" = "「%@」という名前のファイルが既にあります。";
+
+/* MARK: - 言語メニュー */
+"lang.menu" = "言語";
+"lang.system" = "システム（%@）";
+"lang.follow" = "システムに従う";
+
+/* MARK: - メタデータ項目 */
+"meta.platform" = "プラットフォーム";
+"meta.package" = "パッケージ";
+"meta.signature" = "署名";
+"meta.size" = "サイズ";
+"meta.pfsImage" = "PFS イメージ";
+"meta.entries" = "エントリ数";
+"meta.titleId" = "Title ID";
+"meta.contentId" = "Content ID";
+"meta.region" = "地域";
+"meta.type" = "種類";
+"meta.contentVer" = "コンテンツ版";
+"meta.masterVer" = "マスターバージョン";
+"meta.conceptId" = "Concept ID";
+"meta.minSystem" = "最低システム";
+"meta.drm" = "DRM";
+"meta.sdk" = "SDK";
+"meta.version" = "バージョン";
+"meta.baseVersion" = "ベースバージョン";
+"meta.languages" = "言語数";
+"meta.built" = "ビルド日";
+"meta.passcode" = "Passcode";
+"meta.assets" = "アセット";
+"meta.note" = "備考";
+"meta.innerFile" = "内部ファイル";
+
+/* MARK: - トロフィー状態メッセージ */
+"trophy.msg.none" = "このパッケージにトロフィーパックが見つかりません。";
+"trophy.msg.reading" = "%@ を読み込み中…";
+"trophy.msg.unreadable" = "%@ を読み取れません。";
+"trophy.msg.badUCP" = "%@ は読み取り可能な UCP アーカイブではありません。";
+"trophy.msg.noTropmeta" = "%@ には %d 個のファイルがありますが、tropmeta JSON がありません。";
+"trophy.msg.encrypted" = "%@ のトロフィーリストは暗号化されており、NPcommID を特定できません。";
+"trophy.msg.badTRP" = "%@ は読み取り可能なトロフィーパックではありません。";
+"trophy.msg.noESFM" = "%@ 内に TROP.ESFM がありません。";
+
+/* MARK: - エラー */
+"err.notFound" = "ファイルが見つかりません";
+"err.cannotOpen" = "ファイルを開けません";
+"err.cannotRead" = "ファイルを読み取れません";
+"err.cannotReadHeader" = "パッケージヘッダーを読み取れません";
+"err.unknownMagic" = "認識できないファイル形式です（magic %@）";
+"err.noCNT" = "CNT コンテナが見つかりません — 暗号化されたリテール断片の可能性があります。";
+"err.badExfat" = "有効な exFAT イメージではありません";
+"err.ffpfscUnsupported" = "ffpfsc には mkpfs 展開ツールが必要ですが、このビルドには含まれていません";
+"err.ffpkgUnsupported" = "このビルドは ffpkg（UFS2）に対応していません";
+"err.ps3TooSmall" = "PS3 PKG として小さすぎます";
+"err.ps3NotNpDrm" = "PS3 NPDRM パッケージではありません（種類 %@）";
+
+/* MARK: - スクリーンショット */
+"app.screenshot" = "スクリーンショット";
+"app.screenshotHelp" = "現在のウィンドウを PNG 画像として保存";
+"shot.saveMessage" = "現在のウィンドウを PNG 画像として保存します。";
+"shot.savePrompt" = "保存";
+"shot.failed" = "ウィンドウをキャプチャできませんでした。";
+"shot.saveFailed" = "画像を保存できませんでした: %@";
+"alert.ok" = "OK";
+
+/* MARK: - メタデータ値 */
+"meta.sig.official" = "公式";
+"meta.sig.debug" = "デバッグ";
+"meta.drm.paid" = "有料";
+"meta.drm.standard" = "標準";
+"meta.passcode.zeros" = "ゼロ（FPKG の既定値）";
+
+/* MARK: - トロフィーリスト */
+"trophy.col.id" = "ID";
+"trophy.col.grade" = "グレード";
+"trophy.col.name" = "名前";
+"trophy.hidden" = "非表示";
+"trophy.noArt" = "このトロフィーに画像はありません";
+"trophy.selectHint" = "トロフィーを選択すると画像が表示されます";
+
+"trophy.header.count" = "トロフィー %d 件";
+"trophy.header.hidden" = "非表示 %d 件";
+
+/* MARK: - トロフィーの言語 */
+"trophy.locale.auto" = "自動";
+"trophy.locale.help" = "トロフィー名と説明はパッケージに含まれます。表示言語を選択できます";
+"locale.en-us" = "英語（米国）";
+"locale.en-gb" = "英語（英国）";
+"locale.ja-jp" = "日本語";
+"locale.ko-kr" = "韓国語";
+"locale.zh-hans" = "中国語（簡体字）";
+"locale.zh-hant" = "中国語（繁体字）";
+"locale.ru-ru" = "ロシア語";
+"locale.ar-ae" = "アラビア語";
+"locale.de-de" = "ドイツ語";
+"locale.fr-fr" = "フランス語（フランス）";
+"locale.fr-ca" = "フランス語（カナダ）";
+"locale.it-it" = "イタリア語";
+"locale.es-es" = "スペイン語（スペイン）";
+"locale.es-419" = "スペイン語（ラテンアメリカ）";
+"locale.pt-br" = "ポルトガル語（ブラジル）";
+"locale.nl-nl" = "オランダ語";
+"locale.pl-pl" = "ポーランド語";
+"locale.da-dk" = "デンマーク語";
+"locale.pt-pt" = "ポルトガル語（ポルトガル）";
+"locale.th-th" = "タイ語";
+"locale.es-mx" = "スペイン語（メキシコ）";
+"locale.id-id" = "インドネシア語";
+"locale.vi-vn" = "ベトナム語";
+"locale.uk-ua" = "ウクライナ語";
+"locale.tr-tr" = "トルコ語";
+"locale.cs-cz" = "チェコ語";
+"locale.hu-hu" = "ハンガリー語";
+"locale.ro-ro" = "ルーマニア語";
+"locale.el-gr" = "ギリシャ語";
+"locale.he-il" = "ヘブライ語";
+"locale.hi-in" = "ヒンディー語";
+
+/* MARK: - Empty trophy list */
+"trophy.list.empty" = "この言語のトロフィーリストはありません";
+"trophy.msg.searching" = "トロフィーキーを検索中…";
+
+/* MARK: - Icon export */
+"trophy.export.all" = "すべて保存";
+"trophy.export.saveOne" = "この画像を保存";
+"trophy.export.help.all" = "このパック内のすべての画像をフォルダに保存";
+"trophy.export.oneMessage" = "トロフィー %@ の画像の保存先を選択";
+"trophy.export.message" = "トロフィー画像の保存先フォルダを選択";
+"trophy.export.done" = "%d 枚の画像を書き出しました";
+"trophy.export.doneDetail" = "「%@」に保存しました。";
+"trophy.export.partial" = "%d 枚を保存し、%d 枚は保存できませんでした。";
+"trophy.export.failedTitle" = "一部の画像を保存できませんでした";
+"trophy.export.reveal" = "Finder に表示";
+
+/* MARK: - このアプリについて */
+"about.title" = "PKG Viewer について";
+"about.version" = "バージョン %@";
+"about.blurb" = "PlayStation パッケージ viewing 用のネイティブ macOS アプリ。";
+"about.formats" = "PS3 NPDRM、PS4 FPKG/CNT、PS5 FIH と exFAT イメージ、単独の UCP/TRP トロフィーアーカイブに対応。";
+"about.credit" = "原著者: Loopayeh の pkg-viewer（MIT）。";
+"about.portAuthor" = "macOS 移植: CarlChina";
+"about.ok" = "OK";

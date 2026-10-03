@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# SwiftPM / Xcode build output. `.build` is large (hundreds of MB) and
+# reproducible from `swift build`; `build/` holds the assembled .app.
+.build/
+build/
+*.xcodeproj
+*.xcworkspace
+.swiftpm/
+
+# Local scratch
+*.log
+.DS_Store?

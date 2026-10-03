@@ -1,0 +1,221 @@
+/* PKG Viewer — 简体中文 */
+
+/* MARK: - 应用界面 */
+"app.name" = "PKG Viewer";
+"app.open" = "打开";
+"app.openPanel.message" = "选择 PS3/PS4/PS5 安装包、磁盘镜像或游戏文件夹";
+"app.rename" = "重命名";
+"app.copyInfo" = "复制信息";
+
+/* MARK: - 标签页 */
+"tab.overview" = "概览";
+"tab.files" = "文件";
+"tab.trophies" = "奖杯";
+"tab.details" = "详细信息";
+
+/* MARK: - 拖放面板 */
+"drop.title" = "将 PS3 / PS4 / PS5 安装包拖到这里";
+"drop.formats" = ".pkg · .exfat · .ffpfsc · .ffpkg · 或游戏文件夹";
+"drop.blurb" = "直接读取容器内的封面、标题、Title ID、区域、版本与所需固件，无需解压。";
+
+/* MARK: - 加载 / 错误 */
+"loading.reading" = "正在读取安装包…";
+"error.title" = "无法读取此文件";
+"error.chooseAnother" = "选择其他文件…";
+
+/* MARK: - 概览 */
+"overview.save" = "保存";
+"overview.copy" = "拷贝";
+"overview.noCover" = "无封面";
+"overview.logo" = "发行商标志";
+"overview.spec" = "规格";
+"overview.galleryNote" = "在 sce_sys 中发现 %d 张图片 — 点击缩略图切换。";
+
+/* MARK: - 文件 */
+"files.filter" = "按名称筛选";
+"files.count" = "%d / %d";
+"files.noMatch" = "没有匹配的文件";
+"files.selectOne" = "选择一个文件";
+"files.save" = "保存";
+"files.moreBytes" = "… 还有 %d 字节";
+
+/* MARK: - 文件详情 */
+"detail.name" = "名称";
+"detail.size" = "大小";
+"detail.id" = "ID";
+"detail.codec" = "编码";
+"detail.type" = "类型";
+"detail.trophyPack" = "奖杯包";
+
+/* MARK: - 奖杯 */
+"trophy.section" = "奖杯（%d）";
+"trophy.icons" = "图标与横幅（%d）";
+"trophy.none" = "此安装包不含奖杯数据。";
+"trophy.grade.platinum" = "白金";
+"trophy.grade.gold" = "金";
+"trophy.grade.silver" = "银";
+"trophy.grade.bronze" = "铜";
+"trophy.grade.unknown" = "—";
+
+/* MARK: - 详细信息 */
+"details.showAll" = "显示全部字段";
+"details.filterKeys" = "筛选字段";
+"details.fieldCount" = "%d 个字段";
+"details.none" = "未找到元数据";
+"details.nestedFields" = "{ %d 个字段 }";
+
+/* MARK: - 重命名面板 */
+"rename.title" = "重命名";
+"rename.include" = "包含在名称中";
+"rename.part.title" = "标题";
+"rename.part.tid" = "Title ID";
+"rename.part.version" = "版本";
+"rename.part.region" = "区域";
+"rename.custom" = "自定义名称";
+"rename.customPlaceholder" = "自定义名称";
+"rename.preview" = "预览";
+"rename.cancel" = "取消";
+"rename.confirm" = "重命名";
+"rename.err.unchanged" = "名称没有变化。";
+"rename.err.exists" = "已存在名为 %@ 的文件。";
+
+/* MARK: - 语言菜单 */
+"lang.menu" = "语言";
+"lang.system" = "系统（%@）";
+"lang.follow" = "跟随系统";
+
+/* MARK: - 元数据字段 */
+"meta.platform" = "平台";
+"meta.package" = "包类型";
+"meta.signature" = "签名";
+"meta.size" = "大小";
+"meta.pfsImage" = "PFS 镜像";
+"meta.entries" = "条目数";
+"meta.titleId" = "Title ID";
+"meta.contentId" = "Content ID";
+"meta.region" = "区域";
+"meta.type" = "类型";
+"meta.contentVer" = "内容版本";
+"meta.masterVer" = "主版本";
+"meta.conceptId" = "Concept ID";
+"meta.minSystem" = "最低系统";
+"meta.drm" = "DRM";
+"meta.sdk" = "SDK";
+"meta.version" = "版本";
+"meta.baseVersion" = "基础版本";
+"meta.languages" = "语言数";
+"meta.built" = "构建日期";
+"meta.passcode" = "Passcode";
+"meta.assets" = "资源";
+"meta.note" = "备注";
+"meta.innerFile" = "内部文件";
+
+/* MARK: - 奖杯状态消息 */
+"trophy.msg.none" = "此安装包中未找到奖杯包。";
+"trophy.msg.reading" = "正在读取 %@…";
+"trophy.msg.unreadable" = "无法读取 %@。";
+"trophy.msg.badUCP" = "%@ 不是可识别的 UCP 归档。";
+"trophy.msg.noTropmeta" = "%@ 包含 %d 个文件，但没有 tropmeta JSON。";
+"trophy.msg.encrypted" = "%@ 中的奖杯列表已加密，无法确定该游戏的 NPcommID。";
+"trophy.msg.badTRP" = "%@ 不是可识别的奖杯包。";
+"trophy.msg.noESFM" = "%@ 中没有 TROP.ESFM。";
+
+/* MARK: - 错误 */
+"err.notFound" = "找不到文件";
+"err.cannotOpen" = "无法打开文件";
+"err.cannotRead" = "无法读取文件";
+"err.cannotReadHeader" = "无法读取安装包头部";
+"err.unknownMagic" = "无法识别的文件格式（magic %@）";
+"err.noCNT" = "未找到 CNT 容器 — 这看起来是加密的零售版残片。";
+"err.badExfat" = "不是有效的 exFAT 镜像";
+"err.ffpfscUnsupported" = "ffpfsc 需要 mkpfs 解压器，本版本未捆绑。";
+"err.ffpkgUnsupported" = "本版本不支持 ffpkg（UFS2）。";
+"err.ps3TooSmall" = "文件过小，不是有效的 PS3 PKG";
+"err.ps3NotNpDrm" = "不是 PS3 NPDRM 安装包（类型 %@）";
+
+/* MARK: - 截图 */
+"app.screenshot" = "截图";
+"app.screenshotHelp" = "将当前窗口保存为 PNG 图片";
+"shot.saveMessage" = "将当前窗口保存为 PNG 图片。";
+"shot.savePrompt" = "保存";
+"shot.failed" = "无法截取窗口。";
+"shot.saveFailed" = "无法保存图片：%@";
+"alert.ok" = "好";
+
+/* MARK: - 元数据值 */
+"meta.sig.official" = "官方";
+"meta.sig.debug" = "调试";
+"meta.drm.paid" = "付费";
+"meta.drm.standard" = "标准";
+"meta.passcode.zeros" = "全零（FPKG 默认）";
+
+/* MARK: - 奖杯列表 */
+"trophy.col.id" = "ID";
+"trophy.col.grade" = "等级";
+"trophy.col.name" = "名称";
+"trophy.hidden" = "隐藏";
+"trophy.noArt" = "该奖杯没有图片";
+"trophy.selectHint" = "选择一个奖杯以查看图片";
+
+"trophy.header.count" = "%d 个奖杯";
+"trophy.header.hidden" = "%d 个隐藏";
+
+/* MARK: - 奖杯语言 */
+"trophy.locale.auto" = "自动";
+"trophy.locale.help" = "奖杯名称与描述来自安装包，可选择显示语言";
+"locale.en-us" = "英语（美国）";
+"locale.en-gb" = "英语（英国）";
+"locale.ja-jp" = "日语";
+"locale.ko-kr" = "韩语";
+"locale.zh-hans" = "简体中文";
+"locale.zh-hant" = "繁體中文";
+"locale.ru-ru" = "俄语";
+"locale.ar-ae" = "阿拉伯语";
+"locale.de-de" = "德语";
+"locale.fr-fr" = "法语（法国）";
+"locale.fr-ca" = "法语（加拿大）";
+"locale.it-it" = "意大利语";
+"locale.es-es" = "西班牙语（西班牙）";
+"locale.es-419" = "西班牙语（拉美）";
+"locale.pt-br" = "葡萄牙语（巴西）";
+"locale.nl-nl" = "荷兰语";
+"locale.pl-pl" = "波兰语";
+"locale.da-dk" = "丹麦语";
+"locale.pt-pt" = "葡萄牙语（葡萄牙）";
+"locale.th-th" = "泰语";
+"locale.es-mx" = "西班牙语（墨西哥）";
+"locale.id-id" = "印尼语";
+"locale.vi-vn" = "越南语";
+"locale.uk-ua" = "乌克兰语";
+"locale.tr-tr" = "土耳其语";
+"locale.cs-cz" = "捷克语";
+"locale.hu-hu" = "匈牙利语";
+"locale.ro-ro" = "罗马尼亚语";
+"locale.el-gr" = "希腊语";
+"locale.he-il" = "希伯来语";
+"locale.hi-in" = "印地语";
+
+/* MARK: - Empty trophy list */
+"trophy.list.empty" = "该语言没有奖杯列表";
+"trophy.msg.searching" = "正在搜索奖杯密钥…";
+
+/* MARK: - Icon export */
+"trophy.export.all" = "全部保存";
+"trophy.export.saveOne" = "保存此图片";
+"trophy.export.help.all" = "将本奖杯包内所有图片保存到文件夹";
+"trophy.export.oneMessage" = "选择奖杯 %@ 图片的保存位置";
+"trophy.export.message" = "选择保存奖杯图片的文件夹";
+"trophy.export.done" = "已导出 %d 张图片";
+"trophy.export.doneDetail" = "已保存到“%@”。";
+"trophy.export.partial" = "已写入 %d 张，%d 张保存失败。";
+"trophy.export.failedTitle" = "部分图片保存失败";
+"trophy.export.reveal" = "在访达中显示";
+
+/* MARK: - 关于 */
+"about.title" = "关于 PKG Viewer";
+"about.version" = "版本 %@";
+"about.blurb" = "用于查看 PlayStation 安装包原生 macOS 应用。";
+"about.formats" = "支持 PS3 NPDRM、PS4 FPKG/CNT、PS5 FIH 与 exFAT 镜像，以及独立的 UCP/TRP 奖杯包。";
+"about.credit" = "原作者：Loopayeh 的 pkg-viewer（MIT）。";
+"about.portAuthor" = "macOS 移植版：CarlChina";
+"about.ok" = "好";
