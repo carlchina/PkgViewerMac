@@ -1,20 +1,30 @@
 #!/usr/bin/env bash
 # Build PkgViewerMac.app from source.
 #
-# Uses the MacOSX26.5 SDK by default: the MacOSX.sdk symlink in Command Line
-# Tools only ships arm64e SwiftUI modules, which require the SwiftUIMacros
-# plugin that CLT does not install. Override with SDK=/path/to/SDK.
+# SDK choice is pinned to 26.5 for a reason that is easy to get wrong.
+#
+# Command Line Tools ships no macro plugins at all — no PreviewsMacros, no
+# SwiftUIMacros — and neither does any SDK in /Library/Developer. The macOS 27
+# SDK cannot compile a single `@State`: its SwiftUICore interface declares 24
+# `#externalMacro(module: "SwiftUIMacros", …)` references (26.5 declares 10,
+# none of which the compiler must expand), so every property wrapper fails with
+# "plugin for module 'SwiftUIMacros' not found". 26.5 compiles clean.
+#
+# Both SDKs ship the same module architectures (arm64e + x86_64 only, no plain
+# arm64), so "has arm64 modules" is not the test — 27 passes that and still
+# fails. The only real fix is installing the full Xcode, which bundles the
+# plugins. Until then: override with SDK=/path/to/SDK.
 set -euo pipefail
 
 cd "$(dirname "$0")"
 
 SDK="${SDK:-/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk}"
 if [ ! -d "$SDK" ]; then
-  # Fall back to any SDK that still has plain arm64 SwiftUI modules.
-  for c in /Library/Developer/CommandLineTools/SDKs/MacOSX2*.sdk; do
-    if [ -d "$c/System/Library/Frameworks/SwiftUI.framework/Modules/SwiftUI.swiftmodule" ]; then
-      SDK="$c"; break
-    fi
+  # Fall back to the newest SDK that does not require a missing macro plugin.
+  # Keyed on the version, not on module layout: 26.x works, 27+ does not (as of
+  # CLT 16.4 / Swift 6.4). Verified by compiling a @State probe against each.
+  for c in $(ls -d /Library/Developer/CommandLineTools/SDKs/MacOSX26*.sdk 2>/dev/null | sort -Vr); do
+    SDK="$c"; break
   done
 fi
 echo "==> SDK: $SDK"
