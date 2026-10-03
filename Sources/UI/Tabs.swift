@@ -65,10 +65,17 @@ struct OverviewTab: View {
     }
 
     /// Top-to-bottom wash over the key art, in the colour the text needs.
+    ///
+    /// The Light values are much lower than they look like they should be:
+    /// white text on the artwork needs a strong wash, but *dark* text only needs
+    /// enough to knock the artwork's midtones back. At 0.86 the art was
+    /// effectively erased — the page read as plain white with a faint ghost.
+    /// These keep the picture legible while still guaranteeing contrast for
+    /// the label and value text sitting directly on it.
     private var scrimColors: [Color] {
         colorScheme == .dark
             ? [Color.black.opacity(0.82), Color.black.opacity(0.62), Color.black.opacity(0.55)]
-            : [Color.white.opacity(0.86), Color.white.opacity(0.78), Color.white.opacity(0.72)]
+            : [Color.white.opacity(0.62), Color.white.opacity(0.50), Color.white.opacity(0.42)]
     }
 
     var body: some View {
@@ -209,11 +216,23 @@ struct OverviewTab: View {
             }
             Text(res.path.path)
                 .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(Theme.textDim)
+                .foregroundStyle(onArtwork)
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .textSelection(.enabled)
         }
+    }
+
+    /// Text that sits directly on the key art rather than on a card.
+    ///
+    /// `secondaryLabelColor` is tuned for a plain window background; over a
+    /// photograph it is too faint to read in either appearance, so it is
+    /// strengthened and the Light case — dark text on a light wash — goes all
+    /// the way to `labelColor`.
+    private var onArtwork: Color {
+        colorScheme == .dark
+            ? Color(nsColor: .secondaryLabelColor)
+            : Color(nsColor: .labelColor).opacity(0.75)
     }
 
     private var badges: [SummaryBadge] { SummaryBadges.make(for: res) }
@@ -258,7 +277,7 @@ struct OverviewTab: View {
     private var galleryNote: some View {
         Text(l10n.t("overview.galleryNote", vm.coverImages.count))
             .font(.system(size: 10))
-            .foregroundStyle(Theme.textDim)
+            .foregroundStyle(onArtwork)
     }
 
     private func isMonoKey(_ k: String) -> Bool {

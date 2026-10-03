@@ -7,6 +7,9 @@ import UniformTypeIdentifiers
 struct TrophiesTab: View {
     @EnvironmentObject private var vm: PkgViewModel
     @EnvironmentObject private var l10n: L10n
+    /// The selection tint has to be stronger on a light list: the same 28%
+    /// accent that reads clearly over black is nearly invisible over white.
+    @Environment(\.colorScheme) private var colorScheme
     /// The row whose art is shown in the preview pane.
     @State private var selectedID: String?
     /// Drag position of the splitter, in points from the left edge.
@@ -14,6 +17,9 @@ struct TrophiesTab: View {
 
     private let minListWidth: CGFloat = 400
     private let minPreviewWidth: CGFloat = 260
+
+    /// Wash behind the selected row. Light needs more of it to register at all.
+    private var selectionTint: Double { colorScheme == .dark ? 0.28 : 0.42 }
 
     var body: some View {
         GeometryReader { geo in
@@ -151,7 +157,7 @@ struct TrophiesTab: View {
             HStack(spacing: 10) {
                 Text(t.id)
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(Theme.textDim)
+                    .foregroundStyle(active ? selectionText : Theme.text)
                     .frame(width: 40, alignment: .leading)
                 Text(t.gradeText { l10n.t($0) })
                     .font(.system(size: 11, weight: .medium))
@@ -159,7 +165,7 @@ struct TrophiesTab: View {
                     .frame(width: 62, alignment: .leading)
                 Text(t.name)
                     .font(.system(size: 12, weight: active ? .semibold : .regular))
-                    .foregroundStyle(active ? Color.white : Color.primary)
+                    .foregroundStyle(active ? selectionText : Theme.text)
                     .lineLimit(1)
                 Spacer(minLength: 6)
                 if t.hidden {
@@ -171,11 +177,19 @@ struct TrophiesTab: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(active ? Theme.accent.opacity(0.28) : Color.clear)
+            .background(active ? Theme.accent.opacity(selectionTint) : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(t.detail)    }
+
+    /// Text colour for the selected row.
+    ///
+    /// White was correct when the selection was a light accent tint on a dark
+    /// list. On the light appearance the same white-on-pale-blue was unreadable,
+    /// so the selected row now uses the plain label colour and leans on weight
+    /// plus the tint for emphasis.
+    private var selectionText: Color { Theme.text }
 
     // MARK: Preview
 
@@ -378,12 +392,16 @@ struct TrophiesTab: View {
     /// brightest, then gold, silver, bronze. `S` is used for both platinum
     /// (the reduced UCP schema) and silver (the .trp XML), so silver falls
     /// through to the default bronze-free grey.
+    ///
+    /// Declared per appearance: the metal tints are light, chosen against the
+    /// dark list background. On the light appearance platinum was white on
+    /// white and every tier lost its edge, so each has a darkened counterpart.
     private func gradeColor(_ t: String) -> Color {
         switch t.uppercased() {
-        case "P", "PLATINUM": return Color(hex: 0xE8ECF5)
-        case "G", "GOLD": return Color(hex: 0xF2C46B)
-        case "S", "SILVER": return Color(hex: 0xC7CAE0)
-        case "B", "BRONZE": return Color(hex: 0xCC8C6B)
+        case "P", "PLATINUM": return Color.adaptive(dark: 0xE8_ECF5, light: 0x5A_6472)
+        case "G", "GOLD": return Color.adaptive(dark: 0xF2_C46B, light: 0x8A_6318)
+        case "S", "SILVER": return Color.adaptive(dark: 0xC7_CAE0, light: 0x5F_6376)
+        case "B", "BRONZE": return Color.adaptive(dark: 0xCC_8C6B, light: 0x8A_4F_2C)
         case "": return Theme.textDim   // the pack carries no grade
         default: return Theme.textDim
         }

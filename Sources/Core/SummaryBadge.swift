@@ -20,8 +20,8 @@ struct SummaryBadge: Identifiable, Equatable {
     var color: Color {
         switch kind {
         case .platform: return platformColor
-        case .region: return Color(hex: 0xE17B7B)
-        case .size: return Color(hex: 0x6B7280)
+        case .region: return Color.adaptive(dark: 0xE1_7B7B, light: 0xB4_4545)
+        case .size: return Color.adaptive(dark: 0x6B_7280, light: 0x4B_5563)
         case .type: return typeColor
         case .package: return packageColor
         }
@@ -29,32 +29,47 @@ struct SummaryBadge: Identifiable, Equatable {
 
     /// Platform-tinted, as in the original: exFAT teal, ffpfsc amber,
     /// ffpkg violet, PS3 orange, PS4 blue, PS5 near-white.
+    ///
+    /// Every entry declares a Light variant. Measured against the window
+    /// background, *none* of the dark values reach 3:1 on light — the palette
+    /// was picked for a dark UI, where the brighter end is what makes a pill
+    /// legible. Guessing which ones "survived" was wrong: PS4 blue landed at
+    /// 2.46:1 and PS3 orange at 2.15:1, both unreadable. So each Light value
+    /// here is a darkened form of its dark counterpart, verified ≥ 3:1.
     private var platformColor: Color {
         switch format {
-        case .exfat: return Color(hex: 0x3DD6B0)
-        case .ffpfsc: return Color(hex: 0xF2B84B)
-        case .ffpkg: return Color(hex: 0x9B6DDB)
-        case .ps3, .ps3Folder: return Color(hex: 0xE8A34C)
-        case .ps4: return Color(hex: 0x5FA8FF)
-        case .ps5: return Color(hex: 0xF1F3F8)
-        case .appFolder: return Color(hex: 0x6B7280)
+        case .exfat: return Color.adaptive(dark: 0x3D_D6B0, light: 0x0F_8A74)
+        case .ffpfsc: return Color.adaptive(dark: 0xF2_B84B, light: 0xA5_6A_0B)
+        case .ffpkg: return Color.adaptive(dark: 0x9B_6DDB, light: 0x6D_3FBF)
+        case .ps3, .ps3Folder: return Color.adaptive(dark: 0xE8_A34C, light: 0x9A_5B_12)
+        case .ps4: return Color.adaptive(dark: 0x5F_A8FF, light: 0x1D_63_B8)
+        // Near-white on dark, as the original has it; a deep slate on light,
+        // where white would be invisible.
+        case .ps5: return Color.adaptive(dark: 0xF1_F3F8, light: 0x33_3B_47)
+        case .appFolder: return Color.adaptive(dark: 0x6B_7280, light: 0x4B_5563)
         }
     }
 
     /// Update / DLC / base game get distinct colours.
     private var typeColor: Color {
         let t = typeText.lowercased()
-        if t.contains("update") { return Color(hex: 0x5FA8FF) }
-        if t.contains("dlc") || t.contains("patch") { return Color(hex: 0xF59E5B) }
-        return Color(hex: 0x10B981)
+        if t.contains("update") { return Color.adaptive(dark: 0x5F_A8FF, light: 0x1D_63_B8) }
+        if t.contains("dlc") || t.contains("patch") {
+            return Color.adaptive(dark: 0xF5_9E5B, light: 0xB4_5F_1D)
+        }
+        return Color.adaptive(dark: 0x10_B981, light: 0x04_7A_57)
     }
 
     /// FPKG (fake) reads red, OFC (official) green.
     private var packageColor: Color {
         let p = packageText.lowercased()
-        if p.contains("official") || p.contains("ofc") { return Color(hex: 0x10B981) }
-        if p.contains("fake") || p.contains("fpkg") { return Color(hex: 0xE17B7B) }
-        return Color(hex: 0x6B7280)
+        if p.contains("official") || p.contains("ofc") {
+            return Color.adaptive(dark: 0x10_B981, light: 0x04_7A_57)
+        }
+        if p.contains("fake") || p.contains("fpkg") {
+            return Color.adaptive(dark: 0xE1_7B7B, light: 0xB4_4545)
+        }
+        return Color.adaptive(dark: 0x6B_7280, light: 0x4B_5563)
     }
 
     /// Raw (unshortened) values the colours key off.
@@ -180,6 +195,35 @@ extension Color {
             green: Double((hex >> 8) & 0xFF) / 255,
             blue: Double(hex & 0xFF) / 255,
             opacity: 1
+        )
+    }
+
+    /// The same palette entry in both appearances.
+    ///
+    /// The badge colours were picked for the original dark UI: the PS5 pill is
+    /// near-white because white reads as "newest" against a dark window. In
+    /// Light mode that same value is white-on-white — the pill all but
+    /// disappears. Rather than desaturating the dark palette (which would cost
+    /// the badges their meaning there), each colour declares a variant for the
+    /// appearance that cannot show it.
+    ///
+    /// Dynamic rather than sampled from the environment, so the colour is
+    /// correct wherever it is used without threading `colorScheme` through.
+    static func adaptive(dark: UInt32, light: UInt32) -> Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            return NSColor(rgb: isDark ? dark : light)
+        })
+    }
+}
+
+extension NSColor {
+    fileprivate convenience init(rgb: UInt32) {
+        self.init(
+            srgbRed: CGFloat((rgb >> 16) & 0xFF) / 255,
+            green: CGFloat((rgb >> 8) & 0xFF) / 255,
+            blue: CGFloat(rgb & 0xFF) / 255,
+            alpha: 1
         )
     }
 }
