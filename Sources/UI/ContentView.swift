@@ -85,7 +85,10 @@ struct PkgViewerApp: App {
             ContentView(initialURL: url)
                 .environmentObject(vm)
                 .environmentObject(l10n)
-                .preferredColorScheme(.dark)
+                // No forced scheme: the palette is built from semantic colours
+                // and materials, so Light and Dark both work. Pinning `.dark`
+                // here would fight the system and break the accessibility
+                // settings that Theme now defers to.
                 .frame(minWidth: 940, minHeight: 620)
                 .onAppear {
                     vm.loadHistory()
@@ -391,7 +394,7 @@ struct ToolbarBar: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Theme.panel)
+        .background(Mat.bar)
     }
 
     private func openFiles() {

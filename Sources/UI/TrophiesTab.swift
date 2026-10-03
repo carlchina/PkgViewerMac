@@ -61,7 +61,7 @@ struct TrophiesTab: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.panel)
+        .background(Mat.bar)
     }
 
     // MARK: List

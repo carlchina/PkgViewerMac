@@ -7,6 +7,9 @@ struct OverviewTab: View {
     let res: PkgResult
     @EnvironmentObject private var vm: PkgViewModel
     @EnvironmentObject private var l10n: L10n
+    /// The key art scrim has to match the appearance: white text needs a dark
+    /// wash, dark text needs a light one.
+    @Environment(\.colorScheme) private var colorScheme
     /// Index into `vm.coverImages` of the thumbnail the user picked, or nil for
     /// the primary cover.
     ///
@@ -42,21 +45,30 @@ struct OverviewTab: View {
                     .clipped()
             }
             .ignoresSafeArea()
-            // Two layers: a vertical wash for the text column, plus a light
-            // overall tint so the dark theme still reads as one surface.
+            // The scrim follows the appearance. A fixed black wash worked while
+            // the app was dark-only; in Light mode it turned the artwork into a
+            // grey smear, so Light gets a white wash that keeps the dark spec
+            // text readable instead.
             .overlay(alignment: .top) {
                 LinearGradient(
-                    colors: [Color.black.opacity(0.82), Color.black.opacity(0.62),
-                             Color.black.opacity(0.55)],
+                    colors: scrimColors,
                     startPoint: .top, endPoint: .bottom)
             }
             .overlay(alignment: .leading) {
+                let base: Color = scrimColors[0]
                 LinearGradient(
-                    colors: [Color.black.opacity(0.55), Color.clear],
+                    colors: [base.opacity(0.75), Color.clear],
                     startPoint: .leading, endPoint: .trailing)
             }
             .accessibilityHidden(true)
         }
+    }
+
+    /// Top-to-bottom wash over the key art, in the colour the text needs.
+    private var scrimColors: [Color] {
+        colorScheme == .dark
+            ? [Color.black.opacity(0.82), Color.black.opacity(0.62), Color.black.opacity(0.55)]
+            : [Color.white.opacity(0.86), Color.white.opacity(0.78), Color.white.opacity(0.72)]
     }
 
     var body: some View {
@@ -90,7 +102,11 @@ struct OverviewTab: View {
                         }
                         .padding(10)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(cardFill, in: RoundedRectangle(cornerRadius: 8))
+                        .background {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Theme.panel)
+                        }
+                        .panelSurface(cornerRadius: 8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(Theme.border, lineWidth: 0.5)
@@ -205,7 +221,7 @@ struct OverviewTab: View {
     private var format: ContainerFormat { ContainerFormat.detect(for: res) }
 
     private var specCard: some View {
-        Card(fill: cardFill) {
+        Card {
             VStack(alignment: .leading, spacing: 0) {
                 Text(l10n.t("overview.spec"))
                     .font(.system(size: 10, weight: .bold))
@@ -216,11 +232,6 @@ struct OverviewTab: View {
                 }
             }
         }
-    }
-
-    /// Translucent when the key art is behind the page, opaque otherwise.
-    private var cardFill: Color {
-        vm.backdropCover == nil ? Theme.panel : Theme.panel.opacity(0.72)
     }
 
     /// The pills already surface platform, region, size, type and package, so
@@ -307,7 +318,7 @@ struct FilesTab: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
-            .background(Theme.panel)
+            .background(Mat.bar)
 
             Divider().overlay(Theme.border)
 
@@ -494,7 +505,7 @@ struct DetailsTab: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
-            .background(Theme.panel)
+            .background(Mat.bar)
             Divider().overlay(Theme.border)
 
             if flat.isEmpty {
