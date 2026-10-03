@@ -10,6 +10,9 @@ and the UI all run in-process.
   [Loopayeh](https://github.com/Loopayeh) (MIT)
 - **macOS port:** CarlChina
 
+See [Acknowledgements](#acknowledgements) for the projects this port also
+learned from.
+
 ## Build
 
 ```bash
@@ -40,13 +43,24 @@ The last row reports a clear reason in the UI rather than failing silently.
 - **Summary pills** — platform, region, size, type, package
 - **Files tab** — every entry with a filter and inline preview
 - **Trophies tab** — both archive formats, per-trophy art on click, export
+  - **Multilingual trophy text** — the Trophies tab has a language menu listing
+    every locale the pack actually ships, so a title with 17 translations can be
+    read in any of them without leaving the app. Selection starts from the pack's
+    own default (what the console shows) and falls back to the interface
+    language, then English; an explicit pick always wins. Switching re-reads only
+    the metadata, so the loaded art is kept and the list does not re-scan.
+    Dump tools do not always keep `tropmeta_<locale>.json` matched to its
+    contents, so each file's script is detected and a label that contradicts the
+    text is corrected — exact for Han/Kana/Hangul/Cyrillic/Arabic/Thai.
+  - Trophy grade and hidden flags are read from the pack's configuration rather
+    than per language file, so they stay correct whichever locale is selected.
 - **Rename** — `Title - TID - vVersion - Region` with live preview
 - **Screenshot** — saves the window as PNG at full Retina resolution
 - **Drag & drop**, plus Open With and double-click support
 - **Languages** — English, 简体中文, 繁體中文, 日本語
 
-Trophy text follows the pack's own language list; the globe menu overrides it.
-Switching language re-reads only the metadata, keeping loaded art.
+Note the two are independent: the *interface* language (this list) and the
+*trophy* language (whatever the pack provides) are chosen separately.
 
 ## CLI
 
@@ -93,6 +107,26 @@ over:
   member count in their header. Read exactly that many entries rather than
   scanning until something looks wrong — a scan silently drops entries whose
   payload is zero-length.
+
+## Acknowledgements
+
+This port exists because of, and was built by reading:
+
+- **[Loopayeh/pkg-viewer](https://github.com/Loopayeh/pkg-viewer)** — the original
+  project. The parsers, the CLI shape, the summary badges and the overall feature
+  set follow it; this is a Swift/SwiftUI rewrite rather than a fork.
+- **[pearlxcore/PkgViewer](https://github.com/pearlxcore/PkgViewer)** and the
+  [PS4PKGTool](https://github.com/pearlxcore/PS4PKGTool) /
+  [PS5PKGTool](https://github.com/pearlxcore/PS5PKGTool) libraries it builds on.
+  Their readers are the reference for the **TRP and UCP container layouts** —
+  field offsets, header versions, entry sizes — and for the config/text split in
+  PS5 trophy metadata. Those offsets were wrong here until they were checked
+  against this work; the comments at `Trophy.swift` cite them.
+- **[psdevwiki](https://psdev.wiki)** and the wider homebrew scene for the NPDRM
+  and ESFM format documentation, including the public trophy master key.
+
+Thanks also to everyone who reported a package that would not parse — several of
+the bugs fixed during this port were found that way.
 
 ## Licence
 
