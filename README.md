@@ -62,6 +62,24 @@ The last row reports a clear reason in the UI rather than failing silently.
 Note the two are independent: the *interface* language (this list) and the
 *trophy* language (whatever the pack provides) are chosen separately.
 
+### Appearance
+
+Follows the system, both Light and Dark, using semantic colours and materials
+throughout, so Reduce Transparency and Increase Contrast are honoured rather
+than worked around. On macOS 26+ the tab strip is Liquid Glass and one pane of
+it slides between tabs; older systems get the flat fill. Deployment target is
+macOS 14.
+
+Colours that carry meaning are declared per appearance rather than fixed. The
+badge and trophy-grade palettes were originally picked for a dark UI — PS5's
+near-white pill reads as "newest console" there — and on a light background the
+same values are white on white. Each has a darkened counterpart for Light,
+verified by contrast measurement rather than by eye.
+
+Metadata values are shown as the package stores them; only field labels are
+translated. A Chinese label beside an English value keeps this pane consistent
+with the file itself, the CLI output and Copy Info.
+
 ## CLI
 
 ```bash
