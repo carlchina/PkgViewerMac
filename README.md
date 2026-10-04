@@ -13,6 +13,35 @@ and the UI all run in-process.
 See [Acknowledgements](#acknowledgements) for the projects this port also
 learned from.
 
+## Install
+
+Download `PkgViewer-1.0-universal.zip` from the [releases](https://github.com/carlchina/PkgViewerMac/releases), then:
+
+```bash
+unzip PkgViewer-1.0-universal.zip
+xattr -r -d com.apple.quarantine PkgViewer.app     # see the note below
+open PkgViewer.app
+```
+
+**Why the `xattr` step is needed.** The download is **ad-hoc signed**, not
+signed with a Developer ID certificate, and has not been notarised. macOS
+therefore treats it as an unverified developer: `spctl` reports `rejected` and
+Gatekeeper blocks the launch. The `com.apple.quarantine` attribute is the flag
+that triggers this, and clearing it is what tells Gatekeeper you have made your
+own decision.
+
+Building from source (below) sidesteps the question entirely — the app is
+produced locally and never gets a quarantine flag.
+
+Building from source is the better choice whenever you can: it is
+straightforward on any Mac with Command Line Tools, you can read exactly what
+you run, and you are trusting a compiler you already have rather than a
+prebuilt binary. Use the download when you want a quick look or you are on a
+machine where setting up a toolchain is not worth it.
+
+First launch can also be done by right-clicking the app and choosing **Open**
+once, which is the same decision expressed through the UI.
+
 ## Build
 
 ```bash
