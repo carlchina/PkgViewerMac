@@ -66,6 +66,16 @@ ARCHS=x86_64 ./build.sh         # Intel only
 The script verifies the architectures in the finished binary against `ARCHS`
 and fails if they do not match, so a single-arch result cannot ship unnoticed.
 
+Each build bumps the number in parentheses after the version (`1.0 (7)`), so a
+screenshot or a bug report can be tied to an exact binary. The counter is read
+back from the previous bundle, which means a fresh clone starts at `1` and a
+deleted `build/` restarts there too. For a release, freeze it:
+
+```bash
+NO_BUMP=1 ./build.sh       # keep the current number
+BUILD=42 ./build.sh        # set an exact one
+```
+
 ## Supported formats
 
 | | Format | Notes |
@@ -112,7 +122,7 @@ Follows the system, both Light and Dark, using semantic colours and materials
 throughout, so Reduce Transparency and Increase Contrast are honoured rather
 than worked around. On macOS 26+ the tab strip is Liquid Glass and one pane of
 it slides between tabs; older systems get the flat fill. Deployment target is
-macOS 14.
+macOS 12.
 
 Colours that carry meaning are declared per appearance rather than fixed. The
 badge and trophy-grade palettes were originally picked for a dark UI — PS5's

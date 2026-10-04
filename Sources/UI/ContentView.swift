@@ -350,8 +350,9 @@ struct ToolbarBar: View {
                 .font(.system(size: 13, weight: .semibold))
             // Version sits next to the name rather than in a menu only, so it
             // is visible without opening About — handy when someone reports a
-            // bug against a build.
-            Text(AppInfo.version)
+            // bug against a build. The build number is the part that actually
+            // identifies a binary: 1.0 alone is the same for every build.
+            Text(AppInfo.versionWithBuild)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(Theme.textDim)
                 .padding(.horizontal, 6)

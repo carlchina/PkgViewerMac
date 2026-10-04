@@ -40,7 +40,9 @@ enum WindowCapture {
                         .foregroundStyle(Color.white)
                         .shadow(color: Color.black.opacity(0.6), radius: 2, y: 1)
 
-                    Text("v\(AppInfo.version)")
+                    // The build number is what makes a screenshot traceable back
+                    // to an exact binary; "v1.0" alone is not.
+                    Text("v\(AppInfo.versionWithBuild)")
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.92))
                         .shadow(color: Color.black.opacity(0.5), radius: 2, y: 1)

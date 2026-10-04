@@ -50,6 +50,9 @@ ARCH_LIST="${ARCHS:-arm64 x86_64}"
 HOST_ARCH="$(uname -m)"
 BUILD_DIR=".build"
 
+TARGETS=()
+BINS=()
+
 # One --triple per architecture, each with its own build directory: SwiftPM
 # shares state per build path, and sharing one between arches makes it reuse
 # object files compiled for the wrong target.
@@ -125,7 +128,34 @@ fi
 
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+# CFBundleVersion is the build counter shown in parentheses next to the version
+# (1.0 (7)). It is bumped on every run so a screenshot or bug report can be tied
+# to an exact binary.
+#
+# The previous number is read from the app bundle that is about to be replaced.
+# Note this happens *after* the arch verification below would have deleted it, so
+# the read is done here, before the rebuild overwrites the plist.
+#
+#   NO_BUMP=1 ./build.sh     keep the current number (release builds)
+#   BUILD=42 ./build.sh      force an exact number
+PREV_PLIST="$APP/Contents/Info.plist"
+CUR_BUILD=0
+if [ -f "$PREV_PLIST" ]; then
+  CUR_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$PREV_PLIST" 2>/dev/null || echo 0)
+  # PlistBuddy echoes an error for a missing key; fall back rather than trust it.
+  case "$CUR_BUILD" in ''|*[!0-9]*) CUR_BUILD=0 ;; esac
+fi
+
+if [ -n "${BUILD:-}" ]; then
+  NEXT_BUILD="$BUILD"
+elif [ "${NO_BUMP:-0}" = "1" ]; then
+  NEXT_BUILD="$((CUR_BUILD > 0 ? CUR_BUILD : 1))"
+else
+  NEXT_BUILD=$((CUR_BUILD + 1))
+fi
+echo "==> Build number: $CUR_BUILD -> $NEXT_BUILD"
+
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -134,7 +164,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleDisplayName</key>           <string>PKG Viewer</string>
   <key>CFBundleExecutable</key>            <string>PkgViewer</string>
   <key>CFBundleIdentifier</key>            <string>com.local.pkgviewermac</string>
-  <key>CFBundleVersion</key>               <string>1</string>
+  <key>CFBundleVersion</key>               <string>$NEXT_BUILD</string>
   <key>CFBundleShortVersionString</key>    <string>1.0</string>
   <key>CFBundlePackageType</key>           <string>APPL</string>
   <key>CFBundleIconFile</key>              <string>AppIcon</string>
