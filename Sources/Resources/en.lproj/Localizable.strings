@@ -18,6 +18,7 @@
 /* MARK: - Drop pane */
 "drop.title" = "Drop a PS3 / PS4 / PS5 package here";
 "drop.formats" = ".pkg · .exfat · .ffpfsc · .ffpkg · or a game folder";
+"drop.choose" = "Click to choose a package";
 "drop.blurb" = "Cover art, title, Title ID, region, version and required firmware — read straight from the container, nothing is extracted.";
 
 /* MARK: - Loading / errors */

@@ -354,3 +354,29 @@ private struct GlassButtonView: View {
     }
 }
 
+/// Changes the pointer while it is over a view.
+///
+/// SwiftUI has no cursor modifier. `push`/`pop` are a stack, so they are called
+/// as a matched pair inside `onHover`, which keeps them balanced by
+/// construction — an unbalanced pair would leave a hand cursor stuck over
+/// unrelated views for the rest of the session.
+private struct CursorModifier: ViewModifier {
+    let cursor: NSCursor
+
+    func body(content: Content) -> some View {
+        content.onHover { inside in
+            if inside {
+                cursor.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
+    }
+}
+
+extension View {
+    /// Shows `cursor` while the pointer is over this view.
+    func cursor(_ cursor: NSCursor) -> some View {
+        modifier(CursorModifier(cursor: cursor))
+    }
+}

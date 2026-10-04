@@ -66,8 +66,22 @@ struct PkgViewerApp: App {
         // A bare path argument: the document scene only receives files handed
         // over by LaunchServices, so remember it for the first window.
         // args[0] is the executable path, so start the search at index 1.
-        if let first = args.dropFirst().first(where: { !$0.hasPrefix("-") }) {
-            AppDelegate.launchURL = URL(fileURLWithPath: first)
+        //
+        // Flags that take a value are skipped by index, not by "doesn't start
+        // with -": a value like a screenshot output path is a perfectly good
+        // file path, and treating it as a launch target made --test-screenshot
+        // open the output PNG as a package and die in the error pane.
+        let valueFlags: Set<String> = ["--lang", "--info", "--covers",
+                                       "--trophies", "--export-to",
+                                       "--locale", "--test-screenshot"]
+        var valueIdx = Set<Int>()
+        for (i, a) in args.enumerated() where valueFlags.contains(a) {
+            valueIdx.insert(i + 1)
+        }
+        for (i, a) in args.enumerated().dropFirst()
+        where i > 0 && !a.hasPrefix("-") && !valueIdx.contains(i) {
+            AppDelegate.launchURL = URL(fileURLWithPath: a)
+            break
         }
     }
 
@@ -378,13 +392,16 @@ struct ToolbarBar: View {
         HStack(spacing: 6) {
             languageMenu
 
-            Button { takeScreenshot() } label: {
-                Label(l10n.t("app.screenshot"), systemImage: "camera")
-            }
-            .buttonStyle(.glass)
-            .help(l10n.t("app.screenshotHelp"))
-
+            // Everything here only makes sense against a loaded package, so the
+            // group collapses to just "Open" while the drop pane is showing.
+            // A screenshot of the empty state is not worth the button.
             if let res = vm.result, res.failed == nil {
+                Button { takeScreenshot() } label: {
+                    Label(l10n.t("app.screenshot"), systemImage: "camera")
+                }
+                .buttonStyle(.glass)
+                .help(l10n.t("app.screenshotHelp"))
+
                 Button { showingRename = true } label: {
                     Label(l10n.t("app.rename"), systemImage: "pencil")
                 }
@@ -438,11 +455,7 @@ struct ToolbarBar: View {
     }
 
     private func openFiles() {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = true
-        panel.canChooseDirectories = true
-        panel.message = l10n.t("app.openPanel.message")
-        if panel.runModal() == .OK, let u = panel.url { vm.open(u) }
+        choosePkg(vm, message: l10n.t("app.openPanel.message"))
     }
 
     private func copyInfo(_ res: PkgResult) {
@@ -602,6 +615,19 @@ struct TabStrip: View {
 
 // MARK: - Panes
 
+/// Runs the Open panel and loads whatever was chosen.
+///
+/// The toolbar button, the empty state and the error pane all reach this, so
+/// the panel is configured the same way no matter where it is opened from.
+@MainActor
+private func choosePkg(_ vm: PkgViewModel, message: String) {
+    let panel = NSOpenPanel()
+    panel.allowsMultipleSelection = true
+    panel.canChooseDirectories = true
+    panel.message = message
+    if panel.runModal() == .OK, let u = panel.url { vm.open(u) }
+}
+
 struct LoadingPane: View {
     @EnvironmentObject private var l10n: L10n
 
@@ -640,9 +666,7 @@ struct ErrorPane: View {
                 .lineLimit(2)
                 .truncationMode(.middle)
             Button(l10n.t("error.chooseAnother")) {
-                let panel = NSOpenPanel()
-                panel.canChooseDirectories = true
-                if panel.runModal() == .OK, let u = panel.url { vm.open(u) }
+                choosePkg(vm, message: l10n.t("app.openPanel.message"))
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
@@ -653,54 +677,91 @@ struct ErrorPane: View {
     }
 }
 
+/// The empty state.
+///
+/// A drop target *and* a click target: the whole card is a button that opens
+/// the file picker. Making it clickable matters because the drop hint only
+/// tells someone what to do if they already have a package handy — a first
+/// run has nothing to drag, and the toolbar button is easy to miss.
 struct DropPane: View {
+    @EnvironmentObject private var vm: PkgViewModel
     @EnvironmentObject private var l10n: L10n
     @Binding var isTargeted: Bool
+    @State private var hovering = false
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 18) {
-                ZStack {
-                    Circle()
-                        .fill(Theme.accent.opacity(isTargeted ? 0.25 : 0.12))
-                        .frame(width: 80, height: 80)
-                    Image(systemName: "shippingbox")
-                        .font(.system(size: 38, weight: .light))
-                        .foregroundStyle(isTargeted ? Theme.accent : Theme.accent.opacity(0.85))
-                }
-                .scaleEffect(isTargeted ? 1.08 : 1.0)
-                .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isTargeted)
-
-                VStack(spacing: 6) {
-                    Text(l10n.t("drop.title"))
-                        .font(.system(size: 16, weight: .semibold))
-                    Text(l10n.t("drop.formats"))
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.textDim)
-                }
-                Text(l10n.t("drop.blurb"))
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.textDim)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 380)
-
-                Text(AppInfo.versionWithBuild)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Theme.textDim.opacity(0.7))
-                    .padding(.top, 4)
+            Button {
+                choosePkg(vm, message: l10n.t("app.openPanel.message"))
+            } label: {
+                card
             }
-            .padding(.horizontal, 36)
-            .padding(.vertical, 32)
-            .glassPanel(cornerRadius: 20)
+            // .plain so the card keeps its own styling; a bordered button would
+            // draw a second frame around the glass panel.
+            .buttonStyle(.plain)
+            .onHover { hovering = $0 }
+            .cursor(.pointingHand)
             .overlay {
                 if isTargeted {
                     RoundedRectangle(cornerRadius: 20)
                         .strokeBorder(Theme.accent, lineWidth: 1.5)
                 }
             }
-            .shadow(color: Color.black.opacity(0.08), radius: 20, y: 10)
+            .shadow(color: Color.black.opacity(hovering ? 0.14 : 0.08),
+                    radius: hovering ? 26 : 20, y: hovering ? 14 : 10)
+            .animation(.easeOut(duration: 0.15), value: hovering)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(30)
+    }
+
+    private var card: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(Theme.accent.opacity(isTargeted ? 0.25 : 0.12))
+                    .frame(width: 80, height: 80)
+                Image(systemName: "shippingbox")
+                    .font(.system(size: 38, weight: .light))
+                    .foregroundStyle(isTargeted ? Theme.accent : Theme.accent.opacity(0.85))
+            }
+            .scaleEffect(isTargeted ? 1.08 : 1.0)
+            .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isTargeted)
+
+            VStack(spacing: 6) {
+                Text(l10n.t("drop.title"))
+                    .font(.system(size: 16, weight: .semibold))
+                Text(l10n.t("drop.formats"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.textDim)
+            }
+            Text(l10n.t("drop.blurb"))
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.textDim)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 380)
+
+            // The visible affordance: without it the card does not look
+            // clickable, and a hover-only cue is invisible on a trackpad
+            // until the pointer happens to land on it.
+            Label(l10n.t("drop.choose"), systemImage: "folder")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Theme.accent)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(
+                    Capsule().fill(Theme.accent.opacity(hovering || isTargeted ? 0.16 : 0.10))
+                )
+                .padding(.top, 6)
+
+            Text(AppInfo.versionWithBuild)
+                .font(.system(size: 10))
+                .foregroundStyle(Theme.textDim.opacity(0.7))
+                .padding(.top, 4)
+        }
+        .padding(.horizontal, 36)
+        .padding(.vertical, 32)
+        .glassPanel(cornerRadius: 20)
+        .contentShape(Rectangle())
     }
 }

@@ -16,6 +16,7 @@
 /* MARK: - 拖放面板 */
 "drop.title" = "将 PS3 / PS4 / PS5 安装包拖到这里";
 "drop.formats" = ".pkg · .exfat · .ffpfsc · .ffpkg · 或游戏文件夹";
+"drop.choose" = "点击选择安装包";
 "drop.blurb" = "直接读取容器内的封面、标题、Title ID、区域、版本与所需固件，无需解压。";
 
 /* MARK: - 加载 / 错误 */

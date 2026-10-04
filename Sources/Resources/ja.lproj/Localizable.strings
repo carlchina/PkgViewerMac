@@ -16,6 +16,7 @@
 /* MARK: - ドロップ画面 */
 "drop.title" = "PS3 / PS4 / PS5 パッケージをここにドロップ";
 "drop.formats" = ".pkg · .exfat · .ffpfsc · .ffpkg · またはゲームフォルダ";
+"drop.choose" = "クリックしてパッケージを選択";
 "drop.blurb" = "カバー、タイトル、Title ID、地域、バージョン、必要ファームウェアをコンテナから直接読み取ります。展開は不要です。";
 
 /* MARK: - 読み込み / エラー */

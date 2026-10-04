@@ -24,7 +24,7 @@ struct LangCheck {
             "app.name", "app.open", "app.rename", "app.copyInfo",
             "app.screenshot", "app.screenshotHelp", "alert.ok",
             "tab.overview", "tab.files", "tab.trophies", "tab.details",
-            "drop.title", "drop.formats", "drop.blurb",
+            "drop.title", "drop.formats", "drop.blurb", "drop.choose",
             "loading.reading", "error.title", "error.chooseAnother",
             "overview.save", "overview.copy", "overview.noCover", "overview.spec",
             "files.filter", "files.noMatch", "files.selectOne",
