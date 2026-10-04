@@ -187,7 +187,7 @@ enum Meta {
 
     static let ps3TidRegion: [String: String] = [
         "BLUS": "US", "BLES": "EU", "BLJP": "JP", "BLAS": "AS",
-        "NPUA": "US", "NPUA": "US", "NPEB": "EU", "NPJB": "JP", "NPJB": "JP",
+        "NPUA": "US", "NPEB": "EU", "NPJB": "JP"
     ]
 
     /// Region from content-ID prefix (EP0002-... -> Europe).

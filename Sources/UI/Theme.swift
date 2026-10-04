@@ -110,6 +110,78 @@ extension View {
     func panelSurface(cornerRadius: CGFloat = 10) -> some View {
         background(Mat.panel, in: RoundedRectangle(cornerRadius: cornerRadius))
     }
+
+    /// Enhanced Liquid Glass panel styling. On macOS 26+, uses native glassEffect
+    /// with delicate specular rim lighting. Gracefully degrades to translucent
+    /// Material on earlier systems.
+    @ViewBuilder
+    func glassPanel(cornerRadius: CGFloat = 12) -> some View {
+        if #available(macOS 26.0, *) {
+            self
+                .background {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(Theme.panel.opacity(0.62))
+                        .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.35),
+                                    Color.white.opacity(0.08),
+                                    Theme.border.opacity(0.4)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.75
+                        )
+                }
+        } else {
+            self
+                .background {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(Theme.panel)
+                }
+                .panelSurface(cornerRadius: cornerRadius)
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(Theme.border, lineWidth: 0.5)
+                )
+        }
+    }
+
+    /// Liquid Glass floating bar / capsule container (e.g. search bars, tool palettes).
+    @ViewBuilder
+    func glassBar(cornerRadius: CGFloat = 10) -> some View {
+        if #available(macOS 26.0, *) {
+            self
+                .background {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(Theme.panel.opacity(0.55))
+                        .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.3), Color.white.opacity(0.05)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 0.75
+                        )
+                }
+        } else {
+            self
+                .background(Mat.bar, in: RoundedRectangle(cornerRadius: cornerRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(Theme.border, lineWidth: 0.5)
+                )
+        }
+    }
 }
 
 // MARK: - Small building blocks
@@ -144,6 +216,7 @@ struct SpecRow: View {
     }
 }
 
+/// Crystal/Gel styled Pill with subtle specular rim for Liquid Glass aesthetic.
 struct Pill: View {
     let text: String
     let color: Color
@@ -153,19 +226,38 @@ struct Pill: View {
             .font(.system(size: 10, weight: .semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(color.opacity(0.18), in: Capsule())
-            .overlay(Capsule().stroke(color.opacity(0.45), lineWidth: 0.5))
+            .background {
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.26), color.opacity(0.14)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            }
+            .overlay {
+                Capsule()
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.55),
+                                color.opacity(0.4),
+                                color.opacity(0.15)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.65
+                    )
+            }
             .foregroundStyle(color)
     }
 }
 
-/// Rounded card container used for every panel.
-///
-/// Two layers: a themed tint that pins the luminance (so text stays readable
-/// over the key art) and a material on top that adds the platform's own
-/// translucency and vibrancy. Either alone is worse — a bare tint looks flat,
-/// a bare material loses contrast where the artwork is bright.
+/// Rounded card container with Liquid Glass styling.
 struct Card<Content: View>: View {
+    var cornerRadius: CGFloat = 12
     var padding: CGFloat = 14
     @ViewBuilder var content: Content
 
@@ -173,11 +265,92 @@ struct Card<Content: View>: View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Theme.panel)
-            }
-            .panelSurface()
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.border, lineWidth: 0.5))
+            .glassPanel(cornerRadius: cornerRadius)
     }
 }
+
+// MARK: - Glass Button Style
+
+struct GlassButtonStyle: ButtonStyle {
+    var prominent: Bool = false
+    var cornerRadius: CGFloat = 7
+
+    func makeBody(configuration: Configuration) -> some View {
+        GlassButtonView(configuration: configuration, prominent: prominent, cornerRadius: cornerRadius)
+    }
+}
+
+extension ButtonStyle where Self == GlassButtonStyle {
+    static var glass: GlassButtonStyle { GlassButtonStyle(prominent: false) }
+    static var glassProminent: GlassButtonStyle { GlassButtonStyle(prominent: true) }
+    static func glass(prominent: Bool = false, cornerRadius: CGFloat = 7) -> GlassButtonStyle {
+        GlassButtonStyle(prominent: prominent, cornerRadius: cornerRadius)
+    }
+}
+
+private struct GlassButtonView: View {
+    let configuration: ButtonStyle.Configuration
+    let prominent: Bool
+    let cornerRadius: CGFloat
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovered = false
+
+    var body: some View {
+        configuration.label
+            .font(.system(size: 12, weight: prominent ? .semibold : .medium))
+            .foregroundStyle(
+                prominent
+                    ? Color.white
+                    : (isEnabled ? Color(nsColor: .labelColor) : Color(nsColor: .secondaryLabelColor))
+            )
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .background {
+                if #available(macOS 26.0, *) {
+                    if prominent {
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .fill(Theme.accent)
+                            .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+                    } else {
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .fill(
+                                configuration.isPressed
+                                    ? Theme.panelHi
+                                    : (isHovered ? Theme.panelHi.opacity(0.8) : Theme.panel.opacity(0.55))
+                            )
+                            .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+                    }
+                } else {
+                    if prominent {
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .fill(Theme.accent)
+                    } else {
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .fill(configuration.isPressed ? Theme.panelHi : (isHovered ? Theme.panelHi.opacity(0.7) : Theme.panel))
+                            .panelSurface(cornerRadius: cornerRadius)
+                    }
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .strokeBorder(
+                        prominent
+                            ? LinearGradient(
+                                colors: [Color.white.opacity(0.45), Theme.accent.opacity(0.5)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                              )
+                            : LinearGradient(
+                                colors: [Color.white.opacity(0.3), Color.white.opacity(0.08), Theme.border.opacity(0.3)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                              ),
+                        lineWidth: 0.65
+                    )
+            }
+            .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1.0) : 0.45)
+            .onHover { h in isHovered = h }
+    }
+}
+

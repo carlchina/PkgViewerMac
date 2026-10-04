@@ -59,6 +59,10 @@ struct PkgViewerApp: App {
             exit(0)
         }
 
+        if let i = args.firstIndex(of: "--test-screenshot"), i + 1 < args.count {
+            AppDelegate.testScreenshotPath = args[i + 1]
+        }
+
         // A bare path argument: the document scene only receives files handed
         // over by LaunchServices, so remember it for the first window.
         // args[0] is the executable path, so start the search at index 1.
@@ -185,6 +189,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var pendingOpen: URL?
     /// A bare path from the command line, consumed by the first window.
     nonisolated(unsafe) static var launchURL: URL?
+    /// Automated test screenshot output path, if passed via --test-screenshot.
+    nonisolated(unsafe) static var testScreenshotPath: String?
 
     static func consumeLaunchURL() -> URL? {
         defer { launchURL = nil }
@@ -208,6 +214,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @MainActor
 enum SharedModel {
     static var instance: PkgViewModel?
+    static var contentTopOffset: CGFloat = 0
 }
 
 extension Notification.Name {
@@ -227,21 +234,27 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ToolbarBar(showingRename: $showingRename)
-            Divider().overlay(Theme.border)
+            VStack(spacing: 0) {
+                ToolbarBar(showingRename: $showingRename)
+                Divider().overlay(Theme.border)
+            }
 
             if let res = vm.result {
                 if let err = res.failed, res.rows.isEmpty {
                     ErrorPane(message: err, path: res.path)
+                        .background(contentGeometry)
                 } else {
                     TabStrip()
                     Divider().overlay(Theme.border)
                     content(for: res)
+                        .background(contentGeometry)
                 }
             } else if vm.isLoading {
                 LoadingPane()
+                    .background(contentGeometry)
             } else {
                 DropPane(isTargeted: $isTargeted)
+                    .background(contentGeometry)
             }
         }
         .background(Theme.bg)
@@ -276,6 +289,16 @@ struct ContentView: View {
             if let u = initialURL, vm.result?.path != u {
                 vm.open(u)
             }
+            if let outPath = AppDelegate.testScreenshotPath {
+                try? await Task.sleep(nanoseconds: 1_800_000_000)
+                if let data = WindowCapture.pngOfFrontmostWindow() {
+                    try? data.write(to: URL(fileURLWithPath: outPath), options: .atomic)
+                    print("==> Auto test screenshot saved to: \(outPath), contentTopOffset=\(SharedModel.contentTopOffset)")
+                } else {
+                    print("==> Auto test screenshot failed: nil data")
+                }
+                exit(0)
+            }
         }
     }
 
@@ -286,6 +309,19 @@ struct ContentView: View {
         case .files: FilesTab()
         case .trophies: TrophiesTab()
         case .details: DetailsTab(res: res)
+        }
+    }
+
+    private var contentGeometry: some View {
+        GeometryReader { geo in
+            Color.clear
+                .onAppear {
+                    let y = geo.frame(in: .global).minY
+                    if y > 0 { SharedModel.contentTopOffset = y }
+                }
+                .onChange(of: geo.frame(in: .global).minY) { _, newY in
+                    if newY > 0 { SharedModel.contentTopOffset = newY }
+                }
         }
     }
 
@@ -321,9 +357,9 @@ struct ToolbarBar: View {
             Text(AppInfo.version)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(Theme.textDim)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 1)
-                .background(Theme.panelHi, in: Capsule())
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .glassBar(cornerRadius: 6)
                 .textSelection(.enabled)
 
             Spacer()
@@ -332,69 +368,75 @@ struct ToolbarBar: View {
                 ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 44)
             }
 
-            // Language picker in the toolbar as well as the menu bar: on the
-            // empty state there is no tab strip, and hunting the macOS menu bar
-            // for it is not discoverable. `menuStyle(.borderlessButton)` keeps
-            // it looking like a value rather than a button.
-            Menu {
-                Toggle(l10n.t("lang.follow"), isOn: Binding(
-                    get: { l10n.followsSystem },
-                    set: { on in l10n.select(on ? nil : l10n.languageCode) }
-                ))
-                Divider()
-                ForEach(L10n.available) { lang in
-                    Button { l10n.select(lang.code) } label: {
-                        if lang.code == l10n.languageCode {
-                            Label(lang.nativeName, systemImage: "checkmark")
-                        } else {
-                            Text(lang.nativeName)
-                        }
-                    }
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "globe").font(.system(size: 9))
-                    Text(l10n.current.nativeName)
-                }
-            }
-            .menuStyle(.borderlessButton)
-            .controlSize(.small)
-            .fixedSize()
-            .font(.system(size: 10))
-            .foregroundStyle(Theme.textDim)
-            .help(l10n.t("lang.menu"))
+            // Unified actions group styled in matching Liquid Glass
+            actionsGroup
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Mat.bar)
+    }
+
+    private var actionsGroup: some View {
+        HStack(spacing: 6) {
+            languageMenu
 
             Button { takeScreenshot() } label: {
                 Label(l10n.t("app.screenshot"), systemImage: "camera")
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+            .buttonStyle(.glass)
             .help(l10n.t("app.screenshotHelp"))
 
             if let res = vm.result, res.failed == nil {
                 Button { showingRename = true } label: {
                     Label(l10n.t("app.rename"), systemImage: "pencil")
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .buttonStyle(.glass)
                 .disabled(PkgLoader.buildCleanName(res).isEmpty)
 
                 Button { copyInfo(res) } label: {
                     Label(l10n.t("app.copyInfo"), systemImage: "doc.on.doc")
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .buttonStyle(.glass)
             }
 
             Button { openFiles() } label: {
                 Label(l10n.t("app.open"), systemImage: "folder")
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
+            .buttonStyle(.glassProminent)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Mat.bar)
+    }
+
+    private var languageMenu: some View {
+        Menu {
+            Toggle(l10n.t("lang.follow"), isOn: Binding(
+                get: { l10n.followsSystem },
+                set: { on in l10n.select(on ? nil : l10n.languageCode) }
+            ))
+            Divider()
+            ForEach(L10n.available) { lang in
+                Button { l10n.select(lang.code) } label: {
+                    if lang.code == l10n.languageCode {
+                        Label(lang.nativeName, systemImage: "checkmark")
+                    } else {
+                        Text(lang.nativeName)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "globe").font(.system(size: 11))
+                Text(l10n.current.nativeName)
+                    .font(.system(size: 12))
+                Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(Theme.textDim)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .glassBar(cornerRadius: 7)
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(l10n.t("lang.menu"))
     }
 
     private func openFiles() {
@@ -618,29 +660,49 @@ struct DropPane: View {
     @Binding var isTargeted: Bool
 
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "shippingbox")
-                .font(.system(size: 46, weight: .light))
-                .foregroundStyle(Theme.accent.opacity(0.8))
-            VStack(spacing: 6) {
-                Text(l10n.t("drop.title"))
-                    .font(.system(size: 16, weight: .medium))
-                Text(l10n.t("drop.formats"))
-                    .font(.system(size: 12))
+        VStack(spacing: 0) {
+            VStack(spacing: 18) {
+                ZStack {
+                    Circle()
+                        .fill(Theme.accent.opacity(isTargeted ? 0.25 : 0.12))
+                        .frame(width: 80, height: 80)
+                    Image(systemName: "shippingbox")
+                        .font(.system(size: 38, weight: .light))
+                        .foregroundStyle(isTargeted ? Theme.accent : Theme.accent.opacity(0.85))
+                }
+                .scaleEffect(isTargeted ? 1.08 : 1.0)
+                .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isTargeted)
+
+                VStack(spacing: 6) {
+                    Text(l10n.t("drop.title"))
+                        .font(.system(size: 16, weight: .semibold))
+                    Text(l10n.t("drop.formats"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.textDim)
+                }
+                Text(l10n.t("drop.blurb"))
+                    .font(.system(size: 11))
                     .foregroundStyle(Theme.textDim)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 380)
+
+                Text(AppInfo.versionWithBuild)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.textDim.opacity(0.7))
+                    .padding(.top, 4)
             }
-            Text(l10n.t("drop.blurb"))
-                .font(.system(size: 11))
-                .foregroundStyle(Theme.textDim)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 430)
-            // Repeated here because this is what people see first: an About
-            // window is easier to miss than a version line on the empty state.
-            Text(AppInfo.versionWithBuild)
-                .font(.system(size: 10))
-                .foregroundStyle(Theme.textDim.opacity(0.8))
-                .padding(.top, 4)
+            .padding(.horizontal, 36)
+            .padding(.vertical, 32)
+            .glassPanel(cornerRadius: 20)
+            .overlay {
+                if isTargeted {
+                    RoundedRectangle(cornerRadius: 20)
+                        .strokeBorder(Theme.accent, lineWidth: 1.5)
+                }
+            }
+            .shadow(color: Color.black.opacity(0.08), radius: 20, y: 10)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(30)
     }
 }

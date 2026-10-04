@@ -56,8 +56,8 @@ BUILD_DIR=".build"
 TARGETS=()
 for a in $ARCH_LIST; do
   case "$a" in
-    arm64)  triple="arm64-apple-macosx14.0" ;;
-    x86_64) triple="x86_64-apple-macosx14.0" ;;
+    arm64)  triple="arm64-apple-macosx12.0" ;;
+    x86_64) triple="x86_64-apple-macosx12.0" ;;
     *) echo "warning: unsupported ARCHS entry '$a' (expected arm64 or x86_64), skipping" >&2; continue ;;
   esac
   bp="$BUILD_DIR/$a"
@@ -132,7 +132,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleShortVersionString</key>    <string>1.0</string>
   <key>CFBundlePackageType</key>           <string>APPL</string>
   <key>CFBundleIconFile</key>              <string>AppIcon</string>
-  <key>LSMinimumSystemVersion</key>        <string>14.0</string>
+  <key>LSMinimumSystemVersion</key>        <string>12.0</string>
   <key>NSHighResolutionCapable</key>       <true/>
   <key>NSHumanReadableCopyright</key>      <string>Original pkg-viewer by Loopayeh (MIT) · macOS port by CarlChina</string>
   <key>CFBundleDevelopmentRegion</key>     <string>en</string>

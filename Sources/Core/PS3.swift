@@ -19,7 +19,7 @@ enum PS3 {
     /// (disc extract). Empty string = not a PS3 folder.
     static func folderBase(_ path: String) -> String? {
         let fm = FileManager.default
-        var ps3game = (path as NSString).appendingPathComponent("PS3_GAME")
+        let ps3game = (path as NSString).appendingPathComponent("PS3_GAME")
         if fm.fileExists(atPath: (ps3game as NSString).appendingPathComponent("PARAM.SFO")) {
             return ps3game
         }

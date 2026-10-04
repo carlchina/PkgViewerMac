@@ -174,14 +174,32 @@ struct TrophiesTab: View {
                         .foregroundStyle(Theme.textDim)
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(active ? Theme.accent.opacity(selectionTint) : Color.clear)
+            .background {
+                if active {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Theme.accent.opacity(selectionTint))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [Color.white.opacity(0.4), Theme.accent.opacity(0.3)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.65
+                                )
+                        }
+                }
+            }
+            .padding(.horizontal, 6)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(t.detail)    }
+        .help(t.detail)
+    }
 
     /// Text colour for the selected row.
     ///
@@ -218,15 +236,13 @@ struct TrophiesTab: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: .infinity, maxHeight: 260)
-                        .background(Theme.panelHi, in: RoundedRectangle(cornerRadius: 8))
+                        .glassPanel(cornerRadius: 12)
                     // A per-image save next to the art, so the selected trophy
                     // can be written out without going back to the gallery.
                     Button { saveSelectedImage() } label: {
                         Label(l10n.t("trophy.export.saveOne"), systemImage: "square.and.arrow.down")
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .font(.system(size: 10))
+                    .buttonStyle(.glass)
                 } else {
                     noArt
                 }
@@ -324,7 +340,7 @@ struct TrophiesTab: View {
                                 .aspectRatio(contentMode: .fit)
                                 .frame(height: 64)
                                 .frame(maxWidth: .infinity)
-                                .background(Theme.panelHi, in: RoundedRectangle(cornerRadius: 6))
+                                .glassPanel(cornerRadius: 8)
                         }
                     }
                 }
@@ -363,6 +379,9 @@ struct TrophiesTab: View {
             .fixedSize()
             .font(.system(size: 10))
             .foregroundStyle(Theme.textDim)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .glassBar(cornerRadius: 6)
             .help(l10n.t("trophy.locale.help"))
         } else if let tag = vm.trophyLocale {
             HStack(spacing: 4) {
@@ -371,6 +390,9 @@ struct TrophiesTab: View {
             }
             .font(.system(size: 10))
             .foregroundStyle(Theme.textDim)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .glassBar(cornerRadius: 6)
         }
     }
 

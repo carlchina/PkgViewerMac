@@ -87,13 +87,16 @@ struct OverviewTab: View {
                         coverView
                         if vm.coverImages.count > 1 {
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 6) {
+                                HStack(spacing: 8) {
                                     ForEach(Array(vm.coverImages.enumerated()), id: \.offset) { i, item in
                                         thumb(item.data, index: i)
                                     }
                                 }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 4)
                             }
-                            .frame(height: 46)
+                            .glassBar(cornerRadius: 8)
+                            .frame(height: 48)
                         }
                         // Format badge + title, as a card under the cover.
                         HStack(alignment: .center, spacing: 9) {
@@ -109,24 +112,15 @@ struct OverviewTab: View {
                         }
                         .padding(10)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Theme.panel)
-                        }
-                        .panelSurface(cornerRadius: 8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Theme.border, lineWidth: 0.5)
-                        )
+                        .glassPanel(cornerRadius: 10)
 
                         if let d = cover {
                             HStack(spacing: 6) {
                                 Button { saveCover(d) } label: { Label(l10n.t("overview.save"), systemImage: "square.and.arrow.down") }
-                                    .buttonStyle(.bordered).controlSize(.small)
+                                    .buttonStyle(.glass)
                                 Button { copyImage(d) } label: { Label(l10n.t("overview.copy"), systemImage: "doc.on.clipboard") }
-                                    .buttonStyle(.bordered).controlSize(.small)
+                                    .buttonStyle(.glass)
                             }
-                            .font(.system(size: 10))
                         }
                     }
                     .frame(width: 232)
@@ -165,12 +159,11 @@ struct OverviewTab: View {
 
     private var coverView: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10).fill(Theme.panel)
             if let d = cover, let img = NSImage(data: d) {
                 Image(nsImage: img)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "photo")
@@ -183,7 +176,7 @@ struct OverviewTab: View {
             }
         }
         .frame(width: 232, height: 232)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.border, lineWidth: 0.5))
+        .glassPanel(cornerRadius: 14)
     }
 
     private func thumb(_ d: Data, index: Int) -> some View {
@@ -193,13 +186,13 @@ struct OverviewTab: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 38, height: 38)
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
             }
         }
         .buttonStyle(.plain)
         .overlay(
-            RoundedRectangle(cornerRadius: 5)
-                .stroke(selectedCoverIndex == index ? Theme.accent : Theme.border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(selectedCoverIndex == index ? Theme.accent : Color.white.opacity(0.15), lineWidth: selectedCoverIndex == index ? 1.5 : 0.75)
         )
     }
 
@@ -330,16 +323,16 @@ struct FilesTab: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(Theme.textDim)
                 }
-                Divider().frame(height: 14)
+                Divider().frame(height: 12)
                 Text(l10n.t("files.count", entries.count, vm.result?.entries.count ?? 0))
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(Theme.textDim)
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .glassBar(cornerRadius: 8)
             .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Mat.bar)
-
-            Divider().overlay(Theme.border)
+            .padding(.vertical, 8)
 
             if entries.isEmpty {
                 VStack(spacing: 8) {
@@ -373,7 +366,7 @@ struct FilesTab: View {
 
     private var fileList: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
+            LazyVStack(alignment: .leading, spacing: 2) {
                 ForEach(entries) { e in
                     HStack(spacing: 8) {
                         Image(systemName: e.isTrophyPack ? "trophy" : (e.codec != nil ? "cube.box" : "doc"))
@@ -389,9 +382,19 @@ struct FilesTab: View {
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(Theme.textDim)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 4)
-                    .background(selected == e ? Theme.panelHi : Color.clear)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background {
+                        if selected == e {
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Theme.accent.opacity(0.2))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .strokeBorder(Theme.accent.opacity(0.4), lineWidth: 0.5)
+                                )
+                        }
+                    }
+                    .padding(.horizontal, 6)
                     .contentShape(Rectangle())
                     .onTapGesture { selected = e }
                 }
@@ -434,7 +437,7 @@ struct FilesTab: View {
                         Button { saveEntry(e, d) } label: {
                             Label(l10n.t("overview.save"), systemImage: "square.and.arrow.down")
                         }
-                        .buttonStyle(.bordered).controlSize(.small)
+                        .buttonStyle(.glass)
                     }
                 }
                 Spacer()
@@ -511,7 +514,7 @@ struct DetailsTab: View {
                     .controlSize(.mini)
                     .font(.system(size: 11))
                 if showAll {
-                    Divider().frame(height: 14)
+                    Divider().frame(height: 12)
                     Image(systemName: "magnifyingglass").font(.system(size: 11)).foregroundStyle(Theme.textDim)
                     TextField(l10n.t("details.filterKeys"), text: $filter)
                         .textFieldStyle(.plain).font(.system(size: 11))
@@ -522,10 +525,11 @@ struct DetailsTab: View {
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(Theme.textDim)
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .glassBar(cornerRadius: 8)
             .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Mat.bar)
-            Divider().overlay(Theme.border)
+            .padding(.vertical, 8)
 
             if flat.isEmpty {
                 Text(l10n.t("details.none"))
@@ -636,20 +640,21 @@ struct RenameSheet: View {
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
+                .glassPanel(cornerRadius: 10)
 
                 if let e = errorMsg {
                     Text(e).font(.system(size: 11)).foregroundStyle(Theme.warn)
                 }
             }
 
-            HStack {
+            HStack(spacing: 8) {
                 Spacer()
                 Button(l10n.t("rename.cancel")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
+                    .buttonStyle(.glass)
                 Button(l10n.t("rename.confirm")) { perform() }
                     .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.glassProminent)
                     .disabled(preview.isEmpty)
             }
         }

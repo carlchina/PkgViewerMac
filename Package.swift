@@ -10,7 +10,7 @@ let package = Package(
     // Marks en as the base language; UI strings live in
     // Sources/Resources/<lang>.lproj/Localizable.strings.
     defaultLocalization: "en",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v12)],
     targets: [
         .executableTarget(
             name: "PkgViewerMac",
