@@ -161,8 +161,12 @@ enum TrophyPrinter {
                     print("NpCommId   : \(TrophyXML.npcommid(in: use))")
                     print("Title      : \(TrophyXML.titleName(in: use) ?? "-")")
                     print("Trophies   : \(l.count)")
+                    // Resolve the grade label like every other printer path. Passing
+                    // the identity here printed the raw key
+                    // ("trophy.grade.platinum") instead of "Platinum".
+                    let gb = Message.englishBundle
                     for t in l.prefix(10) {
-                        print("   \(t.id)  \(t.gradeText { $0 })  \(t.name)  —  \(t.detail)")
+                        print("   \(t.id)  \(t.gradeText { gb.localizedString(forKey: $0, value: $0, table: nil) })  \(t.name)  —  \(t.detail)")
                     }
                     print(l.isEmpty ? "\nRESULT: FAILED" : "\nRESULT: OK")
                     return
