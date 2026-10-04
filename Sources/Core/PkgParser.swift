@@ -262,7 +262,7 @@ enum PkgParser {
             if cat.lowercased() == "gp" && !sfo.str("VERSION").isEmpty {
                 extra.append(("Base Version", sfo.str("VERSION")))
             }
-            extra.append(("Min. System", sfo.str("SYSTEM_VER").isEmpty ? "-" : sfo.str("SYSTEM_VER")))
+            extra.append(("Min. System", Meta.systemVersion(sfo)))
             extra.append(("Languages", langs > 0 ? String(langs) : "-"))
             extra.append(("Built", built))
             // FPKG hint: which passcode a full extract needs.

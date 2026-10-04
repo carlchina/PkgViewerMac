@@ -209,4 +209,67 @@ enum Meta {
         guard hdr.count >= 8, let ptype = ByteReader(hdr).u32be(at: 0x04) else { return "-" }
         return (ptype & 0x8000_0000) != 0 ? "OFC (Official)" : "FPKG (Fake)"
     }
+
+    /// The SFO `SYSTEM_VER` value, as a human-readable firmware version.
+    ///
+    /// Sony writes these keys in two different shapes depending on the pack:
+    ///
+    ///   - **Text** — "12.00", "04.7000", "05.050.000". Retail packages use
+    ///     this, and it is shown as-is.
+    ///   - **BCD integer** — 0x05010000, 0x04080000. Self-built and early
+    ///     packages store the version as a packed nibble-BCD value, one byte
+    ///     per component. Rendered raw it looks like `0x05010000`, which reads
+    ///     like a memory address rather than a version.
+    ///
+    /// Decoding is strict: every component must be a valid BCD nibble pair
+    /// (0–9 in both halves). Anything else is passed through untouched, since
+    /// a firmware version is major.minor and the remaining bits are not part
+    /// of it — better to show the raw value than to invent a version.
+    ///
+    /// The value is read via `displayString` rather than `str()` because an
+    /// int32 SFO entry parses to `.int`, which `str()` rejects outright — that
+    /// made the whole row blank rather than merely undecoded.
+    static func systemVersion(_ sfo: [String: MetaValue], key: String = "SYSTEM_VER") -> String {
+        let raw = sfo[key]?.displayString.trimmingCharacters(in: .whitespaces) ?? ""
+        guard !raw.isEmpty else { return "-" }
+
+        // Already dotted, or any non-numeric form: nothing to decode.
+        //
+        // The radix is resolved by hand rather than passed as 0. Swift's
+        // integer initialisers are traps, not failable ones: `UInt64("12.00",
+        // radix: 0)` aborts the process on the dot instead of returning nil,
+        // so an SFO holding a plain version string would crash the app.
+        // Stripping the 0x and choosing the radix explicitly keeps every
+        // non-numeric input on the "return it untouched" path.
+        var digits = Substring(raw)
+        var radix = 10
+        if digits.hasPrefix("0x") || digits.hasPrefix("0X") {
+            digits = digits.dropFirst(2)
+            radix = 16
+        }
+        guard !digits.isEmpty, digits.allSatisfy({ $0.isHexDigit }),
+              let n = UInt64(digits, radix: radix), n <= 0xFFFF_FFFF else {
+            return raw
+        }
+        guard n >= 0x0100_0000 else { return raw }
+
+        // Both version bytes must be packed BCD, *and* the low 16 bits must be
+        // zero. Without that second check any hex whose top two bytes happen to
+        // fall in 0x00–0x99 decodes to a plausible-looking version:
+        // 0x12345678 would read "12.34", which is worse than showing the raw
+        // value because it looks authoritative. (The Python original has this
+        // hole; real SYSTEM_VER values leave the low word clear.)
+        guard n & 0x0000_FFFF == 0 else { return raw }
+
+        let hi = UInt32((n >> 24) & 0xFF), lo = UInt32((n >> 16) & 0xFF)
+        guard isBCD(hi), isBCD(lo) else { return raw }
+
+        let text = String(format: "%02X.%02X", hi, lo)
+        // A single-digit major loses its leading zero so "05.01" reads "5.01";
+        // two-digit majors such as "12.00" keep theirs.
+        return text.hasPrefix("0") ? String(text.dropFirst()) : text
+    }
+
+    /// True when both nibbles of a byte are decimal digits.
+    private static func isBCD(_ b: UInt32) -> Bool { (b >> 4) <= 9 && (b & 0xF) <= 9 }
 }

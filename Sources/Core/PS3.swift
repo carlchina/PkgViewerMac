@@ -216,7 +216,11 @@ extension PkgParser {
             ("Title ID", tid.isEmpty ? "-" : tid),
             ("Region", region),
             ("Version", ver.isEmpty ? "-" : ver),
-            ("Min. System", sfo.str("PS3_SYSTEM_VER").isEmpty ? "-" : sfo.str("PS3_SYSTEM_VER")),
+            // PS3 firmware versions are always dotted text ("04.7000"); the BCD integer
+            // form only appears on PS4/PS5, so no decoding is wanted here — but
+            // displayString is still read so an int-typed value shows as a
+            // number rather than a blank cell.
+            ("Min. System", Meta.systemVersion(sfo, key: "PS3_SYSTEM_VER")),
             ("Size", Fmt.size(size)),
             ("Files", entries.isEmpty ? "\(n) (encrypted)" : String(entries.count)),
         ]
