@@ -15,6 +15,7 @@ let package = Package(
         .executableTarget(
             name: "PkgViewerMac",
             path: "Sources",
+            exclude: ["Core/ucp_extract.py"],
             // .process (not .copy) so SwiftPM compiles the .lproj directories
             // into localized resources inside the bundle.
             resources: [.process("Resources"), .copy("../Resources/AppIcon.icns")]

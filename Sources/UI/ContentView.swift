@@ -83,10 +83,8 @@ struct PkgViewerApp: App {
     }
 
     var body: some Scene {
-        // `for: URL.self` makes the scene document-based, so a double-clicked
-        // file or an `open -a` request arrives through `onOpenURL`.
-        WindowGroup(l10n.t("app.name"), for: URL.self) { $url in
-            ContentView(initialURL: url)
+        WindowGroup(l10n.t("app.name")) {
+            ContentView()
                 .environmentObject(vm)
                 .environmentObject(l10n)
                 // No forced scheme: the palette is built from semantic colours
@@ -108,12 +106,11 @@ struct PkgViewerApp: App {
                 // A language change must reach the trophy text too: the packs
                 // are read in the interface language, so a stale tag list would
                 // leave the list in the previous language until the next reload.
-                .onChange(of: l10n.languageCode) { _, _ in
+                .onChange(of: l10n.languageCode) { _ in
                     vm.l10nTags = l10n.effectiveLanguageTags
                     vm.reloadTrophies()
                 }
         }
-        .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button(l10n.t("app.open") + "…") { openPanel() }
@@ -228,7 +225,7 @@ struct ContentView: View {
     @EnvironmentObject private var l10n: L10n
     /// A file the scene was opened with (double-click, `open -a`, or a path
     /// given on the command line).
-    var initialURL: URL?
+    var initialURL: URL? = nil
     @State private var isTargeted = false
     @State private var showingRename = false
 
@@ -277,7 +274,7 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .pkgViewerOpen)) { n in
             if let u = n.object as? URL { vm.open(u) }
         }
-        .onChange(of: initialURL) { _, u in
+        .onChange(of: initialURL) { u in
             // A path handed to the app on the command line, or the document the
             // window was created for.
             if let u = u, vm.result?.path != u {
@@ -319,7 +316,7 @@ struct ContentView: View {
                     let y = geo.frame(in: .global).minY
                     if y > 0 { SharedModel.contentTopOffset = y }
                 }
-                .onChange(of: geo.frame(in: .global).minY) { _, newY in
+                .onChange(of: geo.frame(in: .global).minY) { newY in
                     if newY > 0 { SharedModel.contentTopOffset = newY }
                 }
         }

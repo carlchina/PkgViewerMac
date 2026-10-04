@@ -46,7 +46,7 @@ struct TrophiesTab: View {
         // that was selected. A stale id would keep the export button pinned to
         // "save this image" with nothing to save, so clear it. Ids rather than
         // the array itself: `Trophy` is not Equatable.
-        .onChange(of: vm.trophies.map(\.id)) { _, ids in
+        .onChange(of: vm.trophies.map(\.id)) { ids in
             if let id = selectedID, !ids.contains(id) {
                 selectedID = nil
             }

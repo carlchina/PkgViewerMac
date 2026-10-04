@@ -98,12 +98,29 @@ enum WindowCapture {
         }
     }
 
+    @MainActor
+    private static func renderWatermark(scale: CGFloat) -> NSImage? {
+        if #available(macOS 13.0, *) {
+            let renderer = ImageRenderer(content: WatermarkBadge())
+            renderer.scale = scale
+            return renderer.nsImage
+        } else {
+            let hosting = NSHostingView(rootView: WatermarkBadge())
+            let size = hosting.fittingSize
+            guard size.width > 0, size.height > 0 else { return nil }
+            hosting.frame = NSRect(origin: .zero, size: size)
+            guard let rep = hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds) else { return nil }
+            hosting.cacheDisplay(in: hosting.bounds, to: rep)
+            let img = NSImage(size: size)
+            img.addRepresentation(rep)
+            return img
+        }
+    }
+
     /// Composes a liquid glass watermark badge in the bottom-left corner.
     @MainActor
     private static func addWatermark(to cgImage: CGImage, scale: CGFloat, logicalWidth: CGFloat, logicalHeight: CGFloat) -> NSBitmapImageRep? {
-        let renderer = ImageRenderer(content: WatermarkBadge())
-        renderer.scale = scale
-        guard let watermarkImg = renderer.nsImage else { return nil }
+        guard let watermarkImg = renderWatermark(scale: scale) else { return nil }
 
         let logicalSize = NSSize(width: logicalWidth, height: logicalHeight)
         let baseRep = NSBitmapImageRep(cgImage: cgImage)

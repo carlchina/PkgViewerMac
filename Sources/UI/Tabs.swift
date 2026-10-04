@@ -154,7 +154,7 @@ struct OverviewTab: View {
         // user had picked refers to a row that no longer means what it did.
         // `loadGeneration` covers reopening the *same* path too, which
         // `res.path` alone would not notice.
-        .onChange(of: vm.loadGeneration) { _, _ in selectedCoverIndex = nil }
+        .onChange(of: vm.loadGeneration) { _ in selectedCoverIndex = nil }
     }
 
     private var coverView: some View {
@@ -348,7 +348,7 @@ struct FilesTab: View {
                 )
             }
         }
-        .onChange(of: selected) { _, e in
+        .onChange(of: selected) { e in
             guard let e = e else { preview = nil; return }
             let d = vm.read(e)
             preview = d
@@ -357,7 +357,7 @@ struct FilesTab: View {
         // The selected entry belongs to the package that was open when it was
         // picked; without this the detail pane would keep showing its bytes
         // (and its name) after another package is loaded.
-        .onChange(of: vm.loadGeneration) { _, _ in
+        .onChange(of: vm.loadGeneration) { _ in
             selected = nil
             preview = nil
             previewIsImage = false

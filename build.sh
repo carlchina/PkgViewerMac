@@ -61,10 +61,16 @@ for a in $ARCH_LIST; do
     *) echo "warning: unsupported ARCHS entry '$a' (expected arm64 or x86_64), skipping" >&2; continue ;;
   esac
   bp="$BUILD_DIR/$a"
+  extra_flags=""
+  if [ "$a" = "x86_64" ]; then
+    # CLT on Apple Silicon lacks x86_64 slices for libswiftCompatibility56.a;
+    # allow dynamic lookup for force-loaded compatibility symbols.
+    extra_flags="-Xlinker -undefined -Xlinker dynamic_lookup"
+  fi
   if [ "${SWIFT_SANDBOX:-0}" = "1" ]; then
-    TARGETS+=("swift build -c $CONFIG --sdk $SDK --triple $triple --build-path $bp")
+    TARGETS+=("swift build -c $CONFIG --sdk $SDK --triple $triple --build-path $bp $extra_flags")
   else
-    TARGETS+=("swift build --disable-sandbox -c $CONFIG --sdk $SDK --triple $triple --build-path $bp")
+    TARGETS+=("swift build --disable-sandbox -c $CONFIG --sdk $SDK --triple $triple --build-path $bp $extra_flags")
   fi
   BINS+=("$bp/$CONFIG/PkgViewerMac")
 done
