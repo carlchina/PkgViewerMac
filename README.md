@@ -22,6 +22,18 @@ open build/PkgViewer.app
 
 The Swift toolchain is enough — Command Line Tools, no full Xcode required.
 
+The default build is **universal** (arm64 + x86_64) so the app runs on Apple
+silicon and Intel alike. Cross-compiling is what takes the extra time; narrow it
+when you do not need both:
+
+```bash
+ARCHS=arm64 ./build.sh          # native only, faster
+ARCHS=x86_64 ./build.sh         # Intel only
+```
+
+The script verifies the architectures in the finished binary against `ARCHS`
+and fails if they do not match, so a single-arch result cannot ship unnoticed.
+
 ## Supported formats
 
 | | Format | Notes |

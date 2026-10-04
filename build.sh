@@ -35,26 +35,82 @@ echo "==> Building ($CONFIG)…"
 # script already runs inside one. `defaultLocalization` in Package.swift also
 # makes the manifest stricter, so pass --disable-sandbox by default and allow
 # opting out via SWIFT_SANDBOX=1.
-if [ "${SWIFT_SANDBOX:-0}" = "1" ]; then
-  SWIFT=(swift build -c "$CONFIG" --sdk "$SDK")
-else
-  SWIFT=(swift build --disable-sandbox -c "$CONFIG" --sdk "$SDK")
+#
+# ARCHS controls the target architectures. SwiftPM builds only for the host
+# architecture unless told otherwise, so a plain `swift build` yields a
+# single-arch binary that runs on Apple silicon and nothing else. The default
+# here is a universal binary, because "open the .app and it works" should not
+# depend on which Mac it was downloaded from — Intel Macs are still a real
+# audience and Rosetta is not something to require of them.
+#
+#   ARCHS=arm64 ./build.sh              native only, faster
+#   ARCHS=x86_64 ./build.sh             Intel only
+#   ARCHS="arm64 x86_64" ./build.sh     universal (default)
+ARCH_LIST="${ARCHS:-arm64 x86_64}"
+HOST_ARCH="$(uname -m)"
+BUILD_DIR=".build"
+
+# One --triple per architecture, each with its own build directory: SwiftPM
+# shares state per build path, and sharing one between arches makes it reuse
+# object files compiled for the wrong target.
+TARGETS=()
+for a in $ARCH_LIST; do
+  case "$a" in
+    arm64)  triple="arm64-apple-macosx14.0" ;;
+    x86_64) triple="x86_64-apple-macosx14.0" ;;
+    *) echo "warning: unsupported ARCHS entry '$a' (expected arm64 or x86_64), skipping" >&2; continue ;;
+  esac
+  bp="$BUILD_DIR/$a"
+  if [ "${SWIFT_SANDBOX:-0}" = "1" ]; then
+    TARGETS+=("swift build -c $CONFIG --sdk $SDK --triple $triple --build-path $bp")
+  else
+    TARGETS+=("swift build --disable-sandbox -c $CONFIG --sdk $SDK --triple $triple --build-path $bp")
+  fi
+  BINS+=("$bp/$CONFIG/PkgViewerMac")
+done
+
+if [ ${#TARGETS[@]} -eq 0 ]; then
+  echo "error: no usable architectures in ARCHS='$ARCH_LIST'" >&2
+  exit 1
 fi
 
-"${SWIFT[@]}"
+# The per-arch build dirs differ from the old shared .build path, so a stale
+# arm64-only tree can be sitting there and get picked up as if it were current.
+# Only prune the paths this script owns; leave anything else alone.
+for d in "$BUILD_DIR"/arm64 "$BUILD_DIR"/x86_64; do
+  [ -d "$d" ] && rm -rf "$d"
+done
 
-BIN_DIR="$("${SWIFT[@]}" --show-bin-path)"
-BIN="$BIN_DIR/PkgViewerMac"
+for t in "${TARGETS[@]}"; do
+  $t
+done
+
 APP="build/PkgViewer.app"
 
 echo "==> Assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/PkgViewer"
+
+if [ ${#BINS[@]} -eq 1 ]; then
+  cp "${BINS[0]}" "$APP/Contents/MacOS/PkgViewer"
+else
+  # lipo, not lipo_thick: one thin slice per arch, which is what a universal
+  # binary is. Verified afterwards so a silent single-arch result cannot ship.
+  lipo -create "${BINS[@]}" -output "$APP/Contents/MacOS/PkgViewer"
+  echo "    architectures: $(lipo -archs "$APP/Contents/MacOS/PkgViewer")"
+fi
+
+# The resource bundle is architecture-independent, so any build dir will do.
+BIN_DIR="$BUILD_DIR/$([ "$HOST_ARCH" = "x86_64" ] && echo x86_64 || echo arm64)/$CONFIG"
 
 # SwiftPM emits a resource bundle next to the binary; ship it inside the app.
 # It carries the compiled <lang>.lproj directories.
 BUNDLE="$BIN_DIR/PkgViewerMac_PkgViewerMac.bundle"
+if [ ! -d "$BUNDLE" ]; then
+  for bp in $BUILD_DIR/*/"$CONFIG"; do
+    [ -d "$bp/PkgViewerMac_PkgViewerMac.bundle" ] && BUNDLE="$bp/PkgViewerMac_PkgViewerMac.bundle" && break
+  done
+fi
 if [ -d "$BUNDLE" ]; then
   cp -R "$BUNDLE" "$APP/Contents/Resources/"
   LOCALES=$(find "$BUNDLE" -name '*.lproj' -type d -exec basename {} .lproj \; 2>/dev/null | sort | tr '\n' ' ')
@@ -142,6 +198,18 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </dict>
 </plist>
 PLIST
+
+# Fail loudly if the binary does not cover the requested architectures.
+# A silent single-arch result is the failure mode worth guarding: the build
+# would otherwise succeed and ship something that cannot start on half the
+# Macs it claims to support.
+GOT="$(lipo -archs "$APP/Contents/MacOS/PkgViewer" 2>/dev/null | tr ' ' '\n' | sort | tr '\n' ' ')"
+WANT="$(printf '%s\n' $ARCH_LIST | sort | tr '\n' ' ')"
+if [ "$GOT" != "$WANT" ]; then
+  echo "error: architecture mismatch — wanted [$WANT], got [$GOT]" >&2
+  exit 1
+fi
+echo "==> Verified architectures: $GOT"
 
 # Ad-hoc signature so Gatekeeper lets a locally built app run.
 codesign --force --deep --sign - "$APP" 2>/dev/null || echo "   (codesign skipped)"
