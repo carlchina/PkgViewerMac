@@ -1,5 +1,8 @@
 # PKG Viewer — macOS
 
+<img width="940" height="648" alt="image" src="https://github.com/user-attachments/assets/31085614-f2e9-48f6-bdab-86c661ea260d" />
+
+
 A native macOS viewer for PlayStation packages. Inspects PS3/PS4/PS5 content
 without extracting it.
 
