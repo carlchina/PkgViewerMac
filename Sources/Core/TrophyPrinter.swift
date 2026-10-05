@@ -69,7 +69,12 @@ enum TrophyPrinter {
         }
         print("chosen: \(entry.name)")
 
-        guard let reader = FileHandleReader(url: url) else { print("cannot open"); return }
+        // Open the file that was actually parsed, not the path the user passed:
+        // an exFAT wrapper is a *directory*, and `PkgLoader.load` unwraps it to
+        // the real package inside. `res.path` is that file — opening `url` here
+        // would try to read a folder and fail the pack read ("cannot open").
+        // InfoPrinter.printCovers already follows this; keep `--trophies` in step.
+        guard let reader = FileHandleReader(url: res.path) else { print("cannot open"); return }
         defer { reader.close() }
         guard let data = PkgLoader.readEntry(entry, reader: reader), !data.isEmpty else {
             print("RESULT: cannot read pack bytes"); return
