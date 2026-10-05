@@ -1,6 +1,26 @@
 import Foundation
 import SwiftUI
 import AppKit
+import ImageIO
+
+/// One cover image in the gallery.
+///
+/// The first screen only ever *shows* the primary cover, the backdrop and the
+/// publisher logo — a retail package's key art (`pic1.png` at 3840×2160) is
+/// the big one, and holding every cover's full PNG bytes up front means a
+/// dozen multi-megabyte blobs for thumbnails the user mostly never enlarges.
+///
+/// So the eager set (primary, backdrop, logo) gets its `full` bytes at load;
+/// every cover also gets a small `thumb` for the gallery strip. The remaining
+/// covers keep `full == nil` until the user actually selects one, when
+/// `loadCoverFull` reads them from the open handle and caches them.
+struct CoverArt: Identifiable {
+    let id: String
+    let name: String
+    let entry: PkgEntry
+    var full: Data?
+    var thumb: Data?
+}
 
 /// Bridges the synchronous parsers onto a background queue and owns the live
 /// file handle needed to read entries out of the opened container.
@@ -10,7 +30,7 @@ final class PkgViewModel: ObservableObject {
     @Published var isLoading = false
     /// Localised failure text, resolved from `result.failed` for display.
     @Published var errorText: Message?
-    @Published var coverImages: [(name: String, data: Data)] = []
+    @Published var coverImages: [CoverArt] = []
     /// Bumped on every `open`, so views can tell "a different package" from
     /// "the same one reloaded" — `result.path` alone cannot, and any per-package
     /// view state (a picked cover, a scroll offset) must reset either way.
@@ -40,7 +60,7 @@ final class PkgViewModel: ObservableObject {
     /// as plain values plus the open handles needed for later entry reads.
     private struct Loaded {
         let result: PkgResult
-        let covers: [(name: String, data: Data)]
+        let covers: [CoverArt]
         let reader: FileHandleReader?
         let exfat: ExfatImage?
     }
@@ -74,7 +94,7 @@ final class PkgViewModel: ObservableObject {
             if let handle = handle, res.kind != "unknown" {
                 ex = try? ExfatImage(reader: handle)
             }
-            let covers = PkgLoader.extractCovers(res, reader: handle, exfat: ex)
+            let covers = Self.buildCoverGallery(res, reader: handle, exfat: ex)
             let loaded = Loaded(result: res, covers: covers, reader: handle, exfat: ex)
 
             await MainActor.run {
@@ -474,7 +494,7 @@ final class PkgViewModel: ObservableObject {
         }
     }
 
-    var primaryCover: Data? { coverImages.first?.data }
+    var primaryCover: Data? { coverImages.first?.full ?? coverImages.first?.thumb }
 
     /// The publisher logo, when the package ships one.
     ///
@@ -487,7 +507,7 @@ final class PkgViewModel: ObservableObject {
         let names = ["logo0.png", "logo1.png", "logo.png", "publisher.png"]
         for n in names {
             if let hit = coverImages.first(where: { $0.name.lowercased() == n }) {
-                return hit.data
+                return hit.full ?? hit.thumb
             }
         }
         // A dump may carry a different but unambiguous name; only accept one
@@ -496,7 +516,7 @@ final class PkgViewModel: ObservableObject {
             let n = item.name.lowercased()
             guard n.hasSuffix(".png"), n.contains("logo") else { return false }
             return !n.hasPrefix("pic") && !n.hasPrefix("icon")
-        }?.data
+        }?.full
     }
 
     /// The wide key art (`pic1.png`), used as the Overview backdrop.
@@ -506,27 +526,120 @@ final class PkgViewModel: ObservableObject {
     /// so the explicit name is preferred over "the biggest one available".
     var backdropCover: Data? {
         if let hit = coverImages.first(where: { $0.name.lowercased() == "pic1.png" }) {
-            return hit.data
+            return hit.full ?? hit.thumb
         }
         // A dump may have renamed it; fall back to the largest landscape image.
-        let wide = coverImages
-            .filter { ($0.name.lowercased()).hasSuffix(".png") }
-            .max { a, b in
-                pngWidth(a.data) * pngHeight(a.data) < pngWidth(b.data) * pngHeight(b.data)
-            }
+        let wide = coverImages.max { a, b in
+            coverWidth(a) * coverHeight(a) < coverWidth(b) * coverHeight(b)
+        }
         guard let wide else { return nil }
-        let w = pngWidth(wide.data), h = pngHeight(wide.data)
-        return (h > 0 && w > h * 4 / 3) ? wide.data : nil
+        let w = coverWidth(wide), h = coverHeight(wide)
+        return (h > 0 && w > h * 4 / 3) ? (wide.full ?? wide.thumb) : nil
+    }
+
+    /// Load the full-resolution bytes of a cover on first view.
+    ///
+    /// Only the first-screen covers get their `full` bytes eagerly; the rest
+    /// keep just a small `thumb` until the user clicks one in the gallery.
+    /// Reading uses the already-open handle, so it returns synchronously — the
+    /// selection is set, the bytes cached, and the view re-renders with them.
+    func loadCoverFull(_ index: Int) {
+        guard coverImages.indices.contains(index) else { return }
+        guard coverImages[index].full == nil else { return }
+        guard let data = read(coverImages[index].entry),
+              data.count > 8,
+              data.prefix(4) == Data([0x89, 0x50, 0x4E, 0x47]) else { return }
+        coverImages[index].full = data
+    }
+
+    /// Build the cover gallery for the GUI.
+    ///
+    /// Reads each candidate once (to validate it is a PNG and to record its
+    /// dimensions), then keeps full bytes only for the first-screen set — the
+    /// primary icon, the wide backdrop and a publisher logo — and a downsampled
+    /// `thumb` for the rest. The remaining covers are re-read on demand by
+    /// `loadCoverFull`, so a big key art is not pinned in memory just because a
+    /// gallery strip shows it at 38px.
+    nonisolated static func buildCoverGallery(_ res: PkgResult, reader: FileHandleReader?, exfat: ExfatImage?) -> [CoverArt] {
+        let entries = PkgLoader.coverEntries(res)
+        guard !entries.isEmpty else { return [] }
+
+        // Read once, validate, record dimensions. The full bytes are discarded
+        // below unless the cover is in the eager first-screen set.
+        struct Read {
+            let entry: PkgEntry
+            let data: Data
+            let w: Int
+            let h: Int
+        }
+        var reads: [Read] = []
+        for e in entries {
+            let data: Data?
+            switch e.source {
+            case .exfat: data = exfat.flatMap { PkgLoader.readExfatEntry(e, fs: $0) }
+            default: data = PkgLoader.readEntry(e, reader: reader)
+            }
+            guard let d = data, d.count > 8,
+                  d.prefix(4) == Data([0x89, 0x50, 0x4E, 0x47]) else { continue }
+            reads.append(Read(entry: e, data: d, w: pngWidth(d), h: pngHeight(d)))
+        }
+        guard !reads.isEmpty else { return [] }
+
+        // First-screen eager set: the primary (first), the backdrop and an
+        // optional logo. The backdrop is normally `pic1.png`; on a dump that
+        // renamed it, the widest landscape is taken instead so the page still
+        // has key art behind it.
+        var eager: Set<String> = [reads[0].entry.name]
+        let lower = Set(reads.map { $0.entry.name.lowercased() })
+        for n in ["pic1.png", "logo0.png", "logo1.png", "logo.png", "publisher.png"]
+        where lower.contains(n) {
+            eager.insert(n)
+        }
+        if !lower.contains("pic1.png"),
+           let wide = reads.filter({ $0.h > 0 && $0.w > $0.h * 4 / 3 })
+            .max(by: { $0.w * $0.h < $1.w * $1.h }) {
+            eager.insert(wide.entry.name)
+        }
+
+        return reads.map { r in
+            let isEager = eager.contains(r.entry.name)
+            let thumb = Self.makeThumb(from: r.data) ?? r.data
+            return CoverArt(id: r.entry.name, name: r.entry.name, entry: r.entry,
+                            full: isEager ? r.data : nil, thumb: thumb)
+        }
+    }
+
+    /// Downsample PNG data to a small gallery thumbnail (longest side ~240).
+    ///
+    /// Uses ImageIO's thumbnail API, which scales during decode rather than
+    /// materialising the full bitmap, so a 3840×2160 key art costs a small
+    /// re-encoded PNG instead of a ~33 MB buffer. Falls back to the original
+    /// bytes if ImageIO cannot read the file, so a cover is never lost.
+    private nonisolated static func makeThumb(from data: Data) -> Data? {
+        guard let src = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let opts: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: 240,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+        ]
+        guard let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
+        let rep = NSBitmapImageRep(cgImage: cg)
+        return rep.representation(using: .png, properties: [:])
     }
 
     /// PNG dimensions from the IHDR chunk, or 0 when the blob is not a PNG.
-    private func pngWidth(_ d: Data) -> Int {
+    private nonisolated static func pngWidth(_ d: Data) -> Int {
         guard d.count > 24, d.prefix(4) == Data([0x89, 0x50, 0x4E, 0x47]) else { return 0 }
         return d[16...19].reduce(0) { ($0 << 8) | Int($1) }
     }
 
-    private func pngHeight(_ d: Data) -> Int {
+    private nonisolated static func pngHeight(_ d: Data) -> Int {
         guard d.count > 24, d.prefix(4) == Data([0x89, 0x50, 0x4E, 0x47]) else { return 0 }
         return d[20...23].reduce(0) { ($0 << 8) | Int($1) }
     }
+
+    /// Dimensions of a cover, taken from whichever bytes are currently loaded
+    /// (full or thumb — the thumb is proportional, so the aspect ratio holds).
+    private func coverWidth(_ c: CoverArt) -> Int { Self.pngWidth(c.full ?? c.thumb ?? Data()) }
+    private func coverHeight(_ c: CoverArt) -> Int { Self.pngHeight(c.full ?? c.thumb ?? Data()) }
 }

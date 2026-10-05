@@ -561,7 +561,7 @@ struct TabStrip: View {
         }
     }
 
-    // MARK: Flat fallback (macOS 14–15)
+    // MARK: Flat fallback (below macOS 26)
 
     private var plainStrip: some View {
         HStack(spacing: 4) {

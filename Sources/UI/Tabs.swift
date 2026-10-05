@@ -21,7 +21,7 @@ struct OverviewTab: View {
 
     private var cover: Data? {
         if let i = selectedCoverIndex, vm.coverImages.indices.contains(i) {
-            return vm.coverImages[i].data
+            return vm.coverImages[i].full ?? vm.coverImages[i].thumb
         }
         return vm.primaryCover
     }
@@ -89,7 +89,7 @@ struct OverviewTab: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
                                     ForEach(Array(vm.coverImages.enumerated()), id: \.offset) { i, item in
-                                        thumb(item.data, index: i)
+                                        thumb(item, index: i)
                                     }
                                 }
                                 .padding(.horizontal, 6)
@@ -179,9 +179,14 @@ struct OverviewTab: View {
         .glassPanel(cornerRadius: 14)
     }
 
-    private func thumb(_ d: Data, index: Int) -> some View {
-        Button { selectedCoverIndex = index } label: {
-            if let img = NSImage(data: d) {
+    private func thumb(_ item: CoverArt, index: Int) -> some View {
+        Button {
+            selectedCoverIndex = index
+            // The thumbnail only holds a small preview; pull the full-res bytes
+            // for the big cover so save/copy/display act on the real image.
+            vm.loadCoverFull(index)
+        } label: {
+            if let d = item.thumb ?? item.full, let img = NSImage(data: d) {
                 Image(nsImage: img)
                     .resizable()
                     .aspectRatio(contentMode: .fill)

@@ -59,8 +59,8 @@ extension View {
     /// Apply Liquid Glass on macOS 26+, and nothing on older systems.
     ///
     /// The modifier is wrapped rather than used directly because the deployment
-    /// target is macOS 14: the code has to compile against the 27 SDK while
-    /// still running on 14. Callers can therefore use this unconditionally.
+    /// target is macOS 12: the code has to compile against the 26 SDK while
+    /// still running on 12. Callers can therefore use this unconditionally.
     ///
     /// The glass style is an argument rather than a default because `Glass` is
     /// itself 26+, so it cannot appear in a default value at this deployment

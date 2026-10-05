@@ -61,11 +61,17 @@ enum PkgLoader {
         guard let handle = r else { return failure(url, Message("err.cannotOpen")) }
         defer { if reader == nil { handle.close() } }
 
+        // Memory-map the whole archive instead of copying it into a fresh
+        // buffer. A trophy pack's bulk is PNG icons, and UCP.read only subdata's
+        // the members it wants (tropmeta/tropconf/PNGs), so a >64MB archive is
+        // read on demand rather than all at once. The old cap silently turned
+        // any larger pack into an empty Data() and the trophy list came back
+        // empty with no error.
         let blob: Data
-        if handle.fileSize <= 64 << 20 {
-            blob = handle.read(at: 0, count: Int(handle.fileSize)) ?? Data()
-        } else {
-            blob = Data()
+        do {
+            blob = try Data(contentsOf: url, options: .mappedIfSafe)
+        } catch {
+            return failure(url, Message("err.cannotRead"))
         }
 
         let isTRP = url.pathExtension.lowercased() == "trp"
@@ -446,6 +452,18 @@ enum PkgLoader {
     }
 
     // MARK: Cover art
+
+    /// Ordered cover candidates (entries, not bytes): the declared icon first,
+    /// then any other PNG found in the container, capped like `extractCovers`.
+    ///
+    /// The GUI uses this to build a cover gallery lazily — it reads each entry
+    /// on demand rather than pulling every PNG's bytes into memory up front.
+    static func coverEntries(_ res: PkgResult, max: Int = 12) -> [PkgEntry] {
+        let pngs = res.entries.filter { $0.name.lowercased().hasSuffix(".png") && !$0.isTrophyPack }
+        guard !pngs.isEmpty else { return [] }
+        let ordered = pngs.filter { $0.name == res.iconName } + pngs.filter { $0.name != res.iconName }
+        return Array(ordered.prefix(max))
+    }
 
     /// Cover candidates: prefer the declared icon, then any other PNG found in
     /// the container. Runs on the parsing queue, so it takes the open handles

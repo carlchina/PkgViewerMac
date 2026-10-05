@@ -1,10 +1,12 @@
 // swift-tools-version:6.0
 import PackageDescription
 
-// Note: the default MacOSX.sdk in Command Line Tools only ships arm64e
-// SwiftUI modules, which drag in the SwiftUIMacros plugin that CLT does not
-// ship. Pinning an SDK that still has the plain arm64 modules lets the app
-// build without a full Xcode install. See build.sh.
+// Note: the default MacOSX.sdk in Command Line Tools ships no macro plugins
+// at all — no PreviewsMacros, no SwiftUIMacros — and neither does any SDK in
+// /Library/Developer. The macOS 27 SDK cannot compile a single `@State`: its
+// SwiftUICore interface declares `#externalMacro(module: "SwiftUIMacros", …)`
+// references that no CLT can expand, so every property wrapper fails. A 26.x
+// SDK compiles clean. See build.sh for the full note.
 let package = Package(
     name: "PkgViewerMac",
     // Marks en as the base language; UI strings live in

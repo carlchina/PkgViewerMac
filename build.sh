@@ -1,31 +1,32 @@
 #!/usr/bin/env bash
 # Build PkgViewerMac.app from source.
 #
-# SDK choice is pinned to 26.5 for a reason that is easy to get wrong.
-#
-# Command Line Tools ships no macro plugins at all — no PreviewsMacros, no
-# SwiftUIMacros — and neither does any SDK in /Library/Developer. The macOS 27
-# SDK cannot compile a single `@State`: its SwiftUICore interface declares 24
-# `#externalMacro(module: "SwiftUIMacros", …)` references (26.5 declares 10,
-# none of which the compiler must expand), so every property wrapper fails with
-# "plugin for module 'SwiftUIMacros' not found". 26.5 compiles clean.
-#
-# Both SDKs ship the same module architectures (arm64e + x86_64 only, no plain
-# arm64), so "has arm64 modules" is not the test — 27 passes that and still
-# fails. The only real fix is installing the full Xcode, which bundles the
-# plugins. Until then: override with SDK=/path/to/SDK.
+# CLI toolchain quirk: Command Line Tools ships no macro plugins (no
+# PreviewsMacros, no SwiftUIMacros), and a 26.x SDK is the newest that still
+# compiles without them. The macOS 27 SDK's SwiftUICore declares
+# `#externalMacro(module: "SwiftUIMacros", …)` references no CLT can expand, so
+# even a single `@State` fails with "plugin for module 'SwiftUIMacros' not
+# found". It is *not* a module-architecture issue — 27 ships the same arch
+# slices as 26. The only real fix is installing the full Xcode; until then the
+# build must use a 26.x SDK. Override with SDK=/path/to/SDK.
 set -euo pipefail
 
 cd "$(dirname "$0")"
 
-SDK="${SDK:-/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk}"
-if [ ! -d "$SDK" ]; then
-  # Fall back to the newest SDK that does not require a missing macro plugin.
-  # Keyed on the version, not on module layout: 26.x works, 27+ does not (as of
-  # CLT 16.4 / Swift 6.4). Verified by compiling a @State probe against each.
+# Pick an SDK that actually builds. `SDK` wins; otherwise walk the installed
+# SDKs newest-first and take the first 26.x. A missing usable SDK is a hard
+# error here (not a silent fallback to whatever --sdk would guess), so the
+# failure stays readable.
+SDK="${SDK:-}"
+if [ -z "$SDK" ] || [ ! -d "$SDK" ]; then
   for c in $(ls -d /Library/Developer/CommandLineTools/SDKs/MacOSX26*.sdk 2>/dev/null | sort -Vr); do
     SDK="$c"; break
   done
+fi
+if [ -z "$SDK" ] || [ ! -d "$SDK" ]; then
+  echo "error: no 26.x SDK under /Library/Developer/CommandLineTools/SDKs" >&2
+  echo "       install full Xcode (bundles the macro plugins) or set SDK=/path/to/MacOSX26.x.sdk" >&2
+  exit 1
 fi
 echo "==> SDK: $SDK"
 
@@ -56,7 +57,6 @@ BINS=()
 # One --triple per architecture, each with its own build directory: SwiftPM
 # shares state per build path, and sharing one between arches makes it reuse
 # object files compiled for the wrong target.
-TARGETS=()
 for a in $ARCH_LIST; do
   case "$a" in
     arm64)  triple="arm64-apple-macosx12.0" ;;
@@ -83,12 +83,14 @@ if [ ${#TARGETS[@]} -eq 0 ]; then
   exit 1
 fi
 
-# The per-arch build dirs differ from the old shared .build path, so a stale
-# arm64-only tree can be sitting there and get picked up as if it were current.
-# Only prune the paths this script owns; leave anything else alone.
-for d in "$BUILD_DIR"/arm64 "$BUILD_DIR"/x86_64; do
-  [ -d "$d" ] && rm -rf "$d"
-done
+# No wholesale prune here. Each architecture gets its own `--build-path`
+# (`.build/arm64`, `.build/x86_64`), so SwiftPM manages them independently and
+# never reuses object files compiled for the wrong target. A stale tree cannot
+# be "picked up as current" the way a single shared `.build` could. Dropping
+# the rm -rf keeps the incremental build working and avoids deleting build
+# state that a sandboxed environment treats as a destructive step. To force a
+# clean rebuild, remove the directories yourself:
+#   rm -rf .build/arm64 .build/x86_64
 
 for t in "${TARGETS[@]}"; do
   $t
