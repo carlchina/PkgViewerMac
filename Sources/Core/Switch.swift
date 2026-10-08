@@ -477,6 +477,179 @@ enum Switch {
         return nil
     }
 
+    // MARK: - NACP (Control NCA)
+
+    /// The official metadata a Control NCA's `control.nacp` carries.
+    struct NacpInfo {
+        var titles: [String: String] = [:]
+        var publishers: [String: String] = [:]
+        var displayVersion = ""
+        var icon: Data?
+        var iconName = ""
+    }
+
+    /// Language order fixed by the NACP layout.
+    static let nacpLangs = ["AmericanEnglish", "BritishEnglish", "Japanese", "French",
+                            "German", "LatinAmericanSpanish", "Spanish", "Italian",
+                            "Dutch", "CanadianFrench", "Portuguese", "Russian", "Korean",
+                            "TraditionalChinese", "SimplifiedChinese", "BrazilianPortuguese"]
+
+    /// Read a Control NCA's NACP: official title, publisher, display version
+    /// and icon.
+    ///
+    /// The payload sits in a **RomFS** section — not the PFS0 a Meta NCA uses —
+    /// so this has to walk RomFS's directory/file tables (singly linked via
+    /// sibling pointers) to reach `control.nacp`, decrypting every read with
+    /// AES-CTR. Nil whenever any step cannot be completed; missing keys are a
+    /// normal outcome, not an error.
+    static func ncaControlInfo(_ r: FileHandleReader, at off: UInt64,
+                               ticket: Data?, keys: Keys) -> NacpInfo? {
+        guard let full = ncaHeader(r, at: off, keys: keys), full.count >= 0x600 else { return nil }
+        guard let secKey = ncaSectionKey(full, ticket: ticket, keys: keys) else { return nil }
+        let fd = Data(full)
+        for i in 0..<4 {
+            let start = Self.u32le(fd, 0x240 + i * 16)
+            if start == 0 { continue }
+            let fsh = Array(full[(0x400 + i * 0x200)..<(0x400 + (i + 1) * 0x200)])
+            // Section must be RomFS (3) and AES-CTR encrypted (3).
+            guard fsh[3] == 3, fsh[4] == 3 else { continue }
+            guard Array(fsh[0x8..<0xC]) == Array("IVFC".utf8) else { continue }
+            let secoffRel = UInt64(start) * 0x200
+            let secoff = off + secoffRel
+            let sctr = Array(fsh[0x140..<0x148])
+            let romfsRel = Self.u64le(Data(fsh), 0x90)
+            guard romfsRel <= 2_000_000_000 else { continue }
+
+            let read: (UInt64, Int) -> Data? = { rel, size in
+                Self.ctrRead(r, secoff: secoff, secoffRel: secoffRel, sctr: sctr,
+                             key: secKey, relOff: romfsRel + rel, size: size)
+            }
+            // RomFS header: ten u64s, the ones we need being the directory
+            // table, the file table and where file data starts.
+            guard let rh = read(0, 0x50), rh.count == 0x50 else { continue }
+            var v = [UInt64](repeating: 0, count: 10)
+            for k in 0..<10 { v[k] = Self.u64le(rh, k * 8) }
+            guard v[0] == 0x50 else { continue }
+            let dmo = v[3], dms = v[4], fmo = v[7], fms = v[8], dataOff = v[9]
+            guard dms <= 1_000_000, fms <= 5_000_000 else { continue }
+            guard let dirs = read(dmo, Int(dms)), let files = read(fmo, Int(fms)),
+                  dirs.count >= 24, !files.isEmpty else { continue }
+
+            // A file table entry is parent, sibling, offset, size, hash,
+            // name-length; the name follows. Walk the sibling chain.
+            func filesAt(_ tblOff: UInt32) -> [(String, UInt64, UInt64)] {
+                var out: [(String, UInt64, UInt64)] = []
+                var o = Int(tblOff)
+                var seen = Set<Int>()
+                while o != 0xFFFFFFFF && !seen.contains(o) && o + 32 <= files.count {
+                    seen.insert(o)
+                    let fOff = Self.u64le(files, o + 8)
+                    let fSize = Self.u64le(files, o + 16)
+                    let nlen = Int(Self.u32le(files, o + 28))
+                    guard nlen <= 512, o + 32 + nlen <= files.count else { break }
+                    let nm = String(decoding: files[(o + 32)..<(o + 32 + nlen)], as: UTF8.self)
+                    out.append((nm, fOff, fSize))
+                    o = Int(Self.u32le(files, o + 4))
+                }
+                return out
+            }
+
+            var found: [(dir: String, name: String, off: UInt64, size: UInt64)] = []
+            for f in filesAt(Self.u32le(dirs, 12)) {
+                found.append((dir: "", name: f.0, off: f.1, size: f.2))
+            }
+            // One level of subdirectories: some titles nest the control data.
+            var seenD = Set<Int>()
+            var stack: [Int] = []
+            let firstChild = Int(Self.u32le(dirs, 8))
+            if firstChild != 0xFFFFFFFF { stack.append(firstChild) }
+            while let d = stack.popLast() {
+                if d == 0xFFFFFFFF || seenD.contains(d) || d + 24 > dirs.count { continue }
+                seenD.insert(d)
+                let nlen = Int(Self.u32le(dirs, d + 20))
+                guard nlen <= 512, d + 24 + nlen <= dirs.count else { continue }
+                let dn = String(decoding: dirs[(d + 24)..<(d + 24 + nlen)], as: UTF8.self)
+                for f in filesAt(Self.u32le(dirs, d + 12)) {
+                    found.append((dir: dn, name: f.0, off: f.1, size: f.2))
+                }
+                let child = Self.u32le(dirs, d + 8)
+                if child != 0xFFFFFFFF { stack.append(Int(child)) }
+                let sib = Self.u32le(dirs, d + 4)
+                if sib != 0xFFFFFFFF { stack.append(Int(sib)) }
+            }
+
+            guard let hit = found.first(where: { $0.name.lowercased() == "control.nacp" }),
+                  let nacp = read(dataOff + hit.off, Int(min(hit.size, 0x4000))),
+                  nacp.count >= 0x3080 else { continue }
+
+            var info = NacpInfo()
+            for li in 0..<16 {
+                let nm = Self.cstring(nacp, li * 0x300, 0x200)
+                let pb = Self.cstring(nacp, li * 0x300 + 0x200, 0x100)
+                if !nm.isEmpty { info.titles[nacpLangs[li]] = nm }
+                if !pb.isEmpty { info.publishers[nacpLangs[li]] = pb }
+            }
+            guard !info.titles.isEmpty else { continue }
+            info.displayVersion = Self.cstring(nacp, 0x3060, 0x10)
+
+            // Icons are JPEGs despite the .dat name; pick a preferred language.
+            let icons = found.filter {
+                let n = $0.name.lowercased()
+                return n.hasPrefix("icon_") && n.hasSuffix(".dat")
+                    && $0.size >= 1024 && $0.size <= 8_000_000
+            }
+            var chosen = icons.first
+            for pref in ["icon_AmericanEnglish.dat", "icon_BritishEnglish.dat", "icon_Japanese.dat"] {
+                if let h = icons.first(where: { $0.name == pref }) { chosen = h; break }
+            }
+            if let c = chosen,
+               let dat = read(dataOff + c.off, Int(c.size)),
+               dat.prefix(2) == Data([0xFF, 0xD8]) {
+                info.icon = dat
+                info.iconName = c.name
+            }
+            return info
+        }
+        return nil
+    }
+
+    /// A NUL-terminated UTF-8 field inside `d`, trimmed.
+    private static func cstring(_ d: Data, _ off: Int, _ max: Int) -> String {
+        guard off >= 0, off < d.count else { return "" }
+        let end = min(off + max, d.count)
+        var i = off
+        while i < end, d[i] != 0 { i += 1 }
+        return String(decoding: d[off..<i], as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Pick the NACP title for the interface language, falling back to English.
+    static func preferred(_ dict: [String: String]) -> String {
+        for tag in Locale.preferredLanguages {
+            let t = tag.lowercased()
+            let want: String
+            switch t.prefix(2) {
+            case "zh": want = t.contains("hans") || t.contains("cn") ? "SimplifiedChinese" : "TraditionalChinese"
+            case "ja": want = "Japanese"
+            case "en": want = "AmericanEnglish"
+            case "ko": want = "Korean"
+            case "fr": want = "French"
+            case "de": want = "German"
+            case "es": want = "Spanish"
+            case "it": want = "Italian"
+            case "ru": want = "Russian"
+            case "pt": want = "Portuguese"
+            case "nl": want = "Dutch"
+            default: continue
+            }
+            if let v = dict[want], !v.isEmpty { return v }
+        }
+        for k in ["AmericanEnglish", "BritishEnglish", "Japanese"] {
+            if let v = dict[k], !v.isEmpty { return v }
+        }
+        return dict.values.first ?? ""
+    }
+
     // MARK: - NSP
 
     /// Parse an NSP: PFS0 file list plus whatever metadata is reachable.
@@ -532,6 +705,7 @@ enum Switch {
         }
 
         var hdrTypes: [String: String] = [:]
+        var controlOff: UInt64?
         if let keys {
             // NCA headers are authoritative and cheap (0xC00 of XTS each), so
             // they fill in the types CNMT did not name and add crypto facts.
@@ -545,6 +719,8 @@ enum Switch {
                 if !(entries[i].codec ?? "").contains(" · ") {
                     entries[i].codec = "\(base) · \(sfx)"
                 }
+                // Content type 2 is the Control NCA — the one holding NACP.
+                if det.ctype == 2, controlOff == nil { controlOff = entries[i].absOff }
             }
         }
 
@@ -597,10 +773,6 @@ enum Switch {
         if !cnmtFile.isEmpty { rows.append(("CNMT file", cnmtFile)) }
         else if cnmtBin != nil { rows.append(("CNMT file", "(binary CNMT in Meta NCA)")) }
 
-        let list = entries.enumerated().map { i, e in
-            PkgEntry(id: i, name: e.name, size: Int64(e.size),
-                     source: .offset(e.absOff), codec: e.codec, isTrophyPack: false)
-        }
         var meta: [String: MetaValue] = [
             "TitleId": .string(tid),
             "Version": .string(ver),
@@ -613,10 +785,53 @@ enum Switch {
             meta["NCA \(i)"] = .string(e.ncaDetail ?? "")
         }
 
+        // NACP: the official title, publisher and display version live in the
+        // Control NCA and only decrypt with prod.keys. Without them the title
+        // stays whatever the filename said.
+        var title = fname.title.isEmpty ? url.lastPathComponent : fname.title
+        var nacpIcon: (name: String, data: Data)?
+        if let keys, let coff = controlOff,
+           let nacp = ncaControlInfo(r, at: coff, ticket: ticket, keys: keys) {
+            let official = Self.preferred(nacp.titles)
+            if !official.isEmpty { title = official }
+            let pub = Self.preferred(nacp.publishers)
+            if !pub.isEmpty, let at = rows.firstIndex(where: { $0.0 == "Title ID" }) {
+                rows.insert(("Publisher", pub), at: at + 1)
+            }
+            let disp = nacp.displayVersion
+            if !disp.isEmpty, let vi = rows.firstIndex(where: { $0.0 == "Version" }) {
+                // "1.2.1" is what a player recognises; the raw title version
+                // (e.g. 131072) keeps a row of its own rather than vanishing.
+                rows[vi] = ("Version", disp.lowercased().hasPrefix("v") ? disp : "v\(disp)")
+                if let raw = UInt64(ver), raw > 0 {
+                    rows.insert(("Title Version", "\(raw)"), at: vi + 1)
+                }
+                ver = disp.lowercased().hasPrefix("v") ? String(disp.dropFirst()) : disp
+                meta["Version"] = .string(ver)
+            }
+            for (k, v) in nacp.titles { meta["NACP title \(k)"] = .string(v) }
+            if !nacp.displayVersion.isEmpty { meta["DisplayVersion"] = .string(nacp.displayVersion) }
+            if let icon = nacp.icon, !icon.isEmpty {
+                nacpIcon = (nacp.iconName.isEmpty ? "icon.jpg" : nacp.iconName, icon)
+            }
+        }
+
+        var list = entries.enumerated().map { i, e in
+            PkgEntry(id: i, name: e.name, size: Int64(e.size),
+                     source: .offset(e.absOff), codec: e.codec, isTrophyPack: false)
+        }
+        if let ic = nacpIcon {
+            list.append(PkgEntry(id: list.count, name: ic.name, size: Int64(ic.data.count),
+                                 source: .cached(ic.data), codec: "JPEG", isTrophyPack: false))
+            if let ei = rows.firstIndex(where: { $0.0 == "Entries" }) {
+                rows[ei] = ("Entries", "\(list.count)")
+            }
+        }
+
         return PkgResult(kind: "switch", path: url, fileSize: size,
-                         title: fname.title.isEmpty ? url.lastPathComponent : fname.title,
-                         rows: rows, entries: list, meta: meta,
-                         iconName: iconName, patchTid: tid, ownVersion: ver)
+                         title: title, rows: rows, entries: list, meta: meta,
+                         iconName: nacpIcon?.name ?? iconName,
+                         patchTid: tid, ownVersion: ver)
     }
 
     /// The best per-language key art among an NSP's `<id>.nx.<Lang>.jpg` files.

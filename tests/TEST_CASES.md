@@ -134,12 +134,16 @@ python3 tests/run_test_cases.py              # 自动探测 TEST 目录；退出
 | S-08 binary CNMT（需 keys） | 无明文 `cnmt.xml` 的包从 Meta NCA 读出 Title ID/Version/Type | NSP 与 XCI 均补齐（如 Moving Out: `-` → `0100C4C00E73E000` / `Application`） | ✅ PASS |
 | S-09 封面 | NSP 自带的 `<id>.nx.<Lang>.jpg` 作为封面，按界面语言选 | MONSTER HUNTER RISE 选中 `…nx.SimplifiedChinese.jpg`（8 张全部导出） | ✅ PASS |
 
-## S-3 未实现（原版有，本版暂无）
+## S-3 NACP（Control NCA，需 prod.keys）— 已实现
 
-| 项目 | 说明 |
-|---|---|
-| NACP 官方标题 / 发行商 / Display Version | 需解密 Control NCA 的 RomFS（IVFC + CTR + 目录遍历）。当前标题回退到文件名，`Version` 显示原始 title version 整数（如 `v131072`）而非 `3.6.1` |
-| NACP 图标 | NSP 已改用自带的 `.nx.*.jpg`（无需密钥）；XCI 无明文图标，需 NACP 解密 |
+Control NCA 的 `control.nacp` 藏在 **RomFS** 分区里（IVFC 层级 + AES-CTR），需遍历 RomFS 目录/文件表才能取到。
+
+| 用例 | 断言 | 结果 | 状态 |
+|---|---|---|---|
+| S-10 官方标题 | 标题取 NACP 名（按界面语言，回退 AmericanEnglish） | MONSTER HUNTER RISE 去掉文件名后缀 `(nsw2u)` | ✅ PASS |
+| S-11 Publisher | 出现 `Publisher` 行 | CAPCOM / Holy Wow / 株式会社コナミデジタルエンタテインメント / Konami | ✅ PASS |
+| S-12 Display Version | `Version` 显示可读版本，原始 title version 移到 `Title Version` 行 | `v1.1.1`（Title Version 131072）/ `v1.096A` / `v1.0.0` | ✅ PASS |
+| S-13 NACP 图标 | Control NCA 内 `icon_<Lang>.dat`（实为 JPEG）加入条目并作封面 | `icon_AmericanEnglish.dat`（86995 B，codec=JPEG） | ✅ PASS |
 
 ## S-4 复跑
 
