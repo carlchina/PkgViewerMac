@@ -5,7 +5,7 @@ import Foundation
 /// (ffpfsc needs mkpfs, ffpkg needs pytsk3) which now report a clear message.
 enum PkgLoader {
 
-    static let supportedExtensions = ["pkg", "exfat", "ffpfsc", "ffpkg"]
+    static let supportedExtensions = ["pkg", "exfat", "ffpfsc", "ffpkg", "nsp", "xci"]
 
     static func load(url: URL) -> PkgResult {
         let fm = FileManager.default
@@ -40,6 +40,16 @@ enum PkgLoader {
         guard let reader = FileHandleReader(url: url) else { return failure(url, Message("err.cannotOpen")) }
         defer { reader.close() }
         guard let magic = reader.read(at: 0, count: 16) else { return failure(url, Message("err.cannotRead")) }
+
+        // Nintendo Switch, detected from bytes rather than the extension so a
+        // renamed dump still opens. An NSP is a PFS0 container at offset 0; an
+        // XCI keeps its magic at 0x100 and starts with a padding block.
+        if magic.prefix(4) == Switch.pfs0Magic {
+            return Switch.parseNSP(url, reader, size: size)
+        }
+        if let at100 = reader.read(at: 0x100, count: 4), at100 == Switch.xciMagic {
+            return Switch.parseXCI(url, reader, size: size)
+        }
 
         switch PkgParser.detect(magic) {
         case .fih:  return PkgParser.parseFIH(reader, size: size)
@@ -459,10 +469,24 @@ enum PkgLoader {
     /// The GUI uses this to build a cover gallery lazily — it reads each entry
     /// on demand rather than pulling every PNG's bytes into memory up front.
     static func coverEntries(_ res: PkgResult, max: Int = 12) -> [PkgEntry] {
-        let pngs = res.entries.filter { $0.name.lowercased().hasSuffix(".png") && !$0.isTrophyPack }
+        let pngs = res.entries.filter { Self.isImage($0) }
         guard !pngs.isEmpty else { return [] }
         let ordered = pngs.filter { $0.name == res.iconName } + pngs.filter { $0.name != res.iconName }
         return Array(ordered.prefix(max))
+    }
+
+    /// True for entries that are cover art: PNG, or JPEG when a Switch NSP
+    /// ships its per-language key art that way.
+    static func isImage(_ e: PkgEntry) -> Bool {
+        guard !e.isTrophyPack else { return false }
+        let n = e.name.lowercased()
+        return n.hasSuffix(".png") || n.hasSuffix(".jpg") || n.hasSuffix(".jpeg")
+    }
+
+    /// PNG or JPEG magic, so a truncated or mis-tagged entry is dropped.
+    static func isImageData(_ d: Data) -> Bool {
+        if d.prefix(4) == Data([0x89, 0x50, 0x4E, 0x47]) { return true }
+        return d.prefix(3) == Data([0xFF, 0xD8, 0xFF])
     }
 
     /// Cover candidates: prefer the declared icon, then any other PNG found in
@@ -470,7 +494,7 @@ enum PkgLoader {
     /// rather than reaching into the view model.
     static func extractCovers(_ res: PkgResult, reader: FileHandleReader?, exfat: ExfatImage?) -> [(name: String, data: Data)] {
         var out: [(String, Data)] = []
-        let pngs = res.entries.filter { $0.name.lowercased().hasSuffix(".png") && !$0.isTrophyPack }
+        let pngs = res.entries.filter { Self.isImage($0) }
         guard !pngs.isEmpty else { return out }
         let ordered = pngs.filter { $0.name == res.iconName } + pngs.filter { $0.name != res.iconName }
         for e in ordered.prefix(12) {
@@ -479,7 +503,7 @@ enum PkgLoader {
             case .exfat: data = exfat.flatMap { readExfatEntry(e, fs: $0) }
             default: data = readEntry(e, reader: reader)
             }
-            if let d = data, d.count > 8, d.prefix(4) == Data([0x89, 0x50, 0x4E, 0x47]) {
+            if let d = data, d.count > 8, Self.isImageData(d) {
                 out.append((e.name, d))
             }
             if out.count >= 8 { break }

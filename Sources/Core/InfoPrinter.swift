@@ -52,7 +52,7 @@ enum InfoPrinter {
         let covers = PkgLoader.extractCovers(res, reader: handle, exfat: ex)
         print("resolved path: \(res.path.path)")
         print("icon entry    : \(res.iconName)")
-        print("candidates    : \(res.entries.filter { $0.name.lowercased().hasSuffix(".png") }.count)")
+        print("candidates    : \(res.entries.filter { PkgLoader.isImage($0) }.count)")
         print("--- covers (\(covers.count)) ---")
         for c in covers {
             print(String(format: "  %-16@ %8d bytes", c.name as NSString, c.data.count))

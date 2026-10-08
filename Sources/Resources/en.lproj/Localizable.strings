@@ -135,6 +135,8 @@
 "err.ffpkgUnsupported" = "ffpkg (UFS2) support is not available in this build";
 "err.ps3TooSmall" = "Too small for a PS3 PKG";
 "err.ps3NotNpDrm" = "Not a PS3 NPDRM package (type %@)";
+"err.badNsp" = "Not a valid NSP (PFS0) package";
+"err.badXci" = "Not a valid XCI gamecard image";
 
 /* MARK: - Screenshot */
 "app.screenshot" = "Screenshot";

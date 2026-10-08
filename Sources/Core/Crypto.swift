@@ -260,4 +260,102 @@ enum Crypto {
         }
         return out
     }
+
+    /// AES-128 ECB decrypt of whole blocks (no padding, no chaining).
+    static func aesECBDecrypt(key: [UInt8], data: [UInt8]) -> [UInt8]? {
+        guard key.count == 16, data.count % 16 == 0, !data.isEmpty else { return nil }
+        var out: [UInt8] = []
+        out.reserveCapacity(data.count)
+        var o = 0
+        while o < data.count {
+            guard let d = aesDecryptBlock(key: key, block: Array(data[o..<(o + 16)])) else { return nil }
+            out += d
+            o += 16
+        }
+        return out
+    }
+
+    // MARK: - AES-XTS (Nintendo NCA headers)
+
+    /// Multiply a 16-byte XTS tweak by the field generator α (x), i.e. shift
+    /// the little-endian 128-bit value left by one and reduce modulo
+    /// x^128 + x^7 + x^2 + x + 1 (0x87).
+    private static func xtsMulAlpha(_ t: [UInt8]) -> [UInt8] {
+        var out = [UInt8](repeating: 0, count: 16)
+        var carry: UInt8 = 0
+        // Little-endian: byte 0 is least significant, so the carry moves
+        // towards higher indices.
+        for i in 0..<16 {
+            let b = t[i]
+            out[i] = (b << 1) | carry
+            carry = b >> 7
+        }
+        if carry != 0 { out[0] ^= 0x87 }
+        return out
+    }
+
+    /// AES-XTS decrypt (IEEE 1619), the scheme Nintendo uses for NCA headers.
+    ///
+    /// `key` is 32 bytes — the first half decrypts the data, the second
+    /// encrypts the tweak. `tweak` is the 16-byte data-unit value; successive
+    /// units derive their tweak by multiplying by α, so it must *not* be
+    /// re-encrypted per block. Returns nil unless `data` is whole blocks.
+    static func aesXTSDecrypt(key: [UInt8], tweak: [UInt8], data: [UInt8]) -> [UInt8]? {
+        guard key.count == 32, tweak.count == 16,
+              data.count % 16 == 0, !data.isEmpty else { return nil }
+        let k1 = Array(key[0..<16]), k2 = Array(key[16..<32])
+        guard var t = aesECBEncrypt(key: k2, block: tweak) else { return nil }
+        var out = [UInt8]()
+        out.reserveCapacity(data.count)
+        var o = 0
+        while o < data.count {
+            var pp = [UInt8](repeating: 0, count: 16)
+            for i in 0..<16 { pp[i] = data[o + i] ^ t[i] }
+            guard let cc = aesDecryptBlock(key: k1, block: pp) else { return nil }
+            for i in 0..<16 { out.append(cc[i] ^ t[i]) }
+            t = xtsMulAlpha(t)
+            o += 16
+        }
+        return out
+    }
+
+    // MARK: - AES-CTR (Nintendo NCA sections)
+
+    /// Add `delta` to a big-endian 128-bit counter in place.
+    private static func ctrAdd(_ ctr: inout [UInt8], _ delta: UInt64) {
+        var carry = delta
+        var i = 15
+        while i >= 0 && carry != 0 {
+            let sum = UInt64(ctr[i]) + (carry & 0xFF)
+            ctr[i] = UInt8(sum & 0xFF)
+            carry = (carry >> 8) + (sum >> 8)
+            i -= 1
+        }
+    }
+
+    /// AES-128 CTR transform of whole blocks, starting at `counter`.
+    ///
+    /// CTR is symmetric, so this both encrypts and decrypts. `counter` is the
+    /// 16-byte big-endian starting value; trailing bytes that do not fill a
+    /// block are dropped, matching how the NCA reader rounds to blocks.
+    static func aesCTR(key: [UInt8], counter: [UInt8], data: [UInt8]) -> [UInt8]? {
+        guard key.count == 16, counter.count == 16 else { return nil }
+        var ctr = counter
+        var out = [UInt8]()
+        var o = 0
+        while o + 16 <= data.count {
+            guard let ks = aesECBEncrypt(key: key, block: ctr) else { return nil }
+            for i in 0..<16 { out.append(data[o + i] ^ ks[i]) }
+            ctrAdd(&ctr, 1)
+            o += 16
+        }
+        return out
+    }
+
+    /// Advance a big-endian 128-bit counter by `delta` blocks.
+    static func ctrAdvanced(_ counter: [UInt8], by delta: UInt64) -> [UInt8] {
+        var c = counter
+        ctrAdd(&c, delta)
+        return c
+    }
 }

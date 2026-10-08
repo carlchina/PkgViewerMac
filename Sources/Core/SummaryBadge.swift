@@ -47,6 +47,9 @@ struct SummaryBadge: Identifiable, Equatable {
         // where white would be invisible.
         case .ps5: return Color.adaptive(dark: 0xF1_F3F8, light: 0x33_3B_47)
         case .appFolder: return Color.adaptive(dark: 0x6B_7280, light: 0x4B_5563)
+        // Nintendo red, as the original marks Switch titles; darkened for
+        // Light so the pill keeps its contrast against a light window.
+        case .nsp, .xci: return Color.adaptive(dark: 0xE6_0012, light: 0xA6_0B_1C)
         }
     }
 
@@ -158,6 +161,8 @@ struct FormatBadge: View {
         case .ffpfsc, .ffpkg: return "archivebox.fill"
         case .appFolder: return "folder.fill"
         case .ps3Folder: return "gamecontroller.fill"
+        case .nsp: return "shippingbox.fill"
+        case .xci: return "gamecontroller.fill"
         }
     }
 
@@ -168,6 +173,8 @@ enum ContainerFormat: String {
     case ps5, ps4, ps3
     case exfat, ffpfsc, ffpkg
     case appFolder, ps3Folder
+    /// Nintendo Switch: NSP package / XCI gamecard image.
+    case nsp, xci
 
     /// Derive the format from the file extension / parse result.
     /// Kept off the View so it can be called from any isolation domain.
@@ -176,6 +183,8 @@ enum ContainerFormat: String {
         case "exfat": return .exfat
         case "ffpfsc": return .ffpfsc
         case "ffpkg": return .ffpkg
+        case "nsp": return .nsp
+        case "xci": return .xci
         case "pkg": return res.kind == "ps3" ? .ps3 : (res.kind == "ps5" ? .ps5 : .ps4)
         default:
             // A folder: an app dump or an extracted PS3 game.

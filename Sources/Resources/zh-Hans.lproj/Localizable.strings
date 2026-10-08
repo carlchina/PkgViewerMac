@@ -133,6 +133,8 @@
 "err.ffpkgUnsupported" = "本版本不支持 ffpkg（UFS2）。";
 "err.ps3TooSmall" = "文件过小，不是有效的 PS3 PKG";
 "err.ps3NotNpDrm" = "不是 PS3 NPDRM 安装包（类型 %@）";
+"err.badNsp" = "不是有效的 NSP（PFS0）安装包";
+"err.badXci" = "不是有效的 XCI 卡带镜像";
 
 /* MARK: - 截图 */
 "app.screenshot" = "截图";

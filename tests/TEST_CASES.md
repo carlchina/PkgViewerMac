@@ -102,6 +102,56 @@
 ```bash
 cd ~/WorkBuddy/PS5/PkgViewerMac
 ./build.sh                       # 先构建最新 app
-python3 tests/run_test_cases.py "/Volumes/512 1/TEST"   # 自动化回归，退出码 0 即全部通过
+python3 tests/run_test_cases.py              # 自动探测 TEST 目录；退出码 0 即全部通过
 ./verify.sh                      # 与 Python 原版字段对比
+```
+
+---
+
+# 附：Nintendo Switch (NSP / XCI) 测试
+
+> 对应原版 v1.15.0 新增的 Switch 支持。样本取自 `/Volumes/DISK/switch/`，
+> 密钥来自 `~/.switch/prod.keys`（有 keys 才能解 NCA 头部与 binary CNMT）。
+
+## S-1 测试对象
+
+| 类型 | 数量 | 说明 |
+|---|---|---|
+| NSP（PFS0） | 8 | 含 `.nsz`（压缩 NCA，容器仍为 PFS0，元数据可读） |
+| XCI（卡带镜像） | 14 | 含 2GB / 8GB / 16GB / 32GB 卡带 |
+
+## S-2 用例与结果（全量 22 个样本）
+
+| 用例 | 断言 | 结果 | 状态 |
+|---|---|---|---|
+| S-01 容器识别 | 每个样本 `--info` 的 `Platform` 为 `Nintendo Switch (NSP/PFS0)` 或 `(XCI/Gamecard)` | 22/22 命中，无 ERROR、无超时 | ✅ PASS |
+| S-02 文件列表 | 条目数与 PFS0/HFS0 表一致（NSP 4–21 条；XCI 4–233 条） | 全部列出 | ✅ PASS |
+| S-03 Title ID | 每个样本都能给出 16 位 Title ID | **缺失 0** | ✅ PASS |
+| S-04 类型 Type | 每个样本都能给出 Application/Patch/AddOnContent | **缺失 0** | ✅ PASS |
+| S-05 固件解码 | `Min. System` 由 HOS 打包整数解为可读版本 | 18.0.1 / 16.0.3 / 12.1.0 / 11.0.1 / 10.0.0 | ✅ PASS |
+| S-06 卡带容量 | XCI 的 `Cartridge` 由 0x10D 字节解码 | 2GB / 8GB / 16GB / 32GB | ✅ PASS |
+| S-07 NCA 类型（需 keys） | 每个 NCA 标注 `Program · tk` / `Control · k10` / `Meta · k10` 等 | AES-XTS 头部解密正确 | ✅ PASS |
+| S-08 binary CNMT（需 keys） | 无明文 `cnmt.xml` 的包从 Meta NCA 读出 Title ID/Version/Type | NSP 与 XCI 均补齐（如 Moving Out: `-` → `0100C4C00E73E000` / `Application`） | ✅ PASS |
+| S-09 封面 | NSP 自带的 `<id>.nx.<Lang>.jpg` 作为封面，按界面语言选 | MONSTER HUNTER RISE 选中 `…nx.SimplifiedChinese.jpg`（8 张全部导出） | ✅ PASS |
+
+## S-3 未实现（原版有，本版暂无）
+
+| 项目 | 说明 |
+|---|---|
+| NACP 官方标题 / 发行商 / Display Version | 需解密 Control NCA 的 RomFS（IVFC + CTR + 目录遍历）。当前标题回退到文件名，`Version` 显示原始 title version 整数（如 `v131072`）而非 `3.6.1` |
+| NACP 图标 | NSP 已改用自带的 `.nx.*.jpg`（无需密钥）；XCI 无明文图标，需 NACP 解密 |
+
+## S-4 复跑
+
+```bash
+python3 - <<'PY'
+import os, subprocess
+BIN="./build/PkgViewer.app/Contents/MacOS/PkgViewer"; SW="/Volumes/DISK/switch"
+for f in sorted(os.listdir(SW)):
+    if not f.lower().endswith(('.nsp','.xci','.nsz')): continue
+    r=subprocess.run([BIN,"--info",os.path.join(SW,f)],capture_output=True,text=True,timeout=180)
+    d=dict(l.split(":",1) for l in r.stdout.splitlines() if ":" in l and not l.startswith("  "))
+    d={k.strip():v.strip() for k,v in d.items()}
+    print(f"{'OK ' if 'Switch' in d.get('Platform','') else 'ERR'} {f[:46]:48} {d.get('Title ID','-'):18} {d.get('Type','-'):12} {d.get('Min. System','-')}")
+PY
 ```

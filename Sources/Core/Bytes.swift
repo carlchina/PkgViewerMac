@@ -253,14 +253,14 @@ enum Meta {
         }
         guard n >= 0x0100_0000 else { return raw }
 
-        // Both version bytes must be packed BCD, *and* the low 16 bits must be
-        // zero. Without that second check any hex whose top two bytes happen to
-        // fall in 0x00–0x99 decodes to a plausible-looking version:
-        // 0x12345678 would read "12.34", which is worse than showing the raw
-        // value because it looks authoritative. (The Python original has this
-        // hole; real SYSTEM_VER values leave the low word clear.)
-        guard n & 0x0000_FFFF == 0 else { return raw }
-
+        // Both version bytes must be packed BCD. The low 16 bits are *not*
+        // required to be zero — real packages use them as flags. An earlier
+        // version insisted on a clear low word so an unrelated hex could not
+        // decode to a plausible-looking version (0x12345678 would read
+        // "12.34"), but that assumption is false in practice: KOF2002 ships
+        // SYSTEM_VER 0x05508000 (low word 0x8000) and printed the raw
+        // 89161728 instead of 5.50. The Python original dropped the same check
+        // in v1.14.3 for the same reason, so only the BCD guard stays.
         let hi = UInt32((n >> 24) & 0xFF), lo = UInt32((n >> 16) & 0xFF)
         guard isBCD(hi), isBCD(lo) else { return raw }
 

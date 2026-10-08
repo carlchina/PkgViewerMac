@@ -548,7 +548,7 @@ final class PkgViewModel: ObservableObject {
         guard coverImages[index].full == nil else { return }
         guard let data = read(coverImages[index].entry),
               data.count > 8,
-              data.prefix(4) == Data([0x89, 0x50, 0x4E, 0x47]) else { return }
+              PkgLoader.isImageData(data) else { return }
         coverImages[index].full = data
     }
 
@@ -579,8 +579,7 @@ final class PkgViewModel: ObservableObject {
             case .exfat: data = exfat.flatMap { PkgLoader.readExfatEntry(e, fs: $0) }
             default: data = PkgLoader.readEntry(e, reader: reader)
             }
-            guard let d = data, d.count > 8,
-                  d.prefix(4) == Data([0x89, 0x50, 0x4E, 0x47]) else { continue }
+            guard let d = data, d.count > 8, PkgLoader.isImageData(d) else { continue }
             reads.append(Read(entry: e, data: d, w: pngWidth(d), h: pngHeight(d)))
         }
         guard !reads.isEmpty else { return [] }

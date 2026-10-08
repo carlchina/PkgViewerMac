@@ -19,7 +19,11 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIN = os.path.join(ROOT, "build", "PkgViewer.app", "Contents", "MacOS", "PkgViewer")
-DEFAULT_DIR = "/Volumes/512 1/TEST"
+DEFAULT_DIR = "/Volumes/512/TEST"
+
+# The external drive is not always mounted under the same name (it appears as
+# both "512" and "512 1"), so fall back to the other spelling before giving up.
+DIR_CANDIDATES = [DEFAULT_DIR, "/Volumes/512 1/TEST"]
 
 # Each fixture: id, the .pkg (or directory) path inside TEST, an --info path
 # (already the payload after unwrap, shown in "resolved path"), plus the fields
@@ -38,6 +42,9 @@ FIXTURES = [
             "Region: Japan",
             "Type: Base Game",
             "Version: 01.00",
+            # SYSTEM_VER is a packed BCD integer (0x05508000) that must decode
+            # to 5.50, not print raw as 89161728.
+            "Min. System: 5.50",
             "Entries: 31",
             "format badge: ps4",
         ],
@@ -66,6 +73,7 @@ FIXTURES = [
             "Type: Update",
             "Version: 01.01",
             "Base Version: 01.00",
+            "Min. System: 5.50",
             "Entries: 38",
             "format badge: ps4",
         ],
@@ -158,9 +166,12 @@ def check(name, output, patterns):
 
 
 def main():
-    test_dir = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_DIR
-    if not os.path.isdir(test_dir):
-        print(f"error: TEST dir not found: {test_dir}")
+    test_dir = sys.argv[1] if len(sys.argv) > 1 else None
+    if test_dir is None:
+        test_dir = next((d for d in DIR_CANDIDATES if os.path.isdir(d)), None)
+    if not test_dir or not os.path.isdir(test_dir):
+        print("error: TEST dir not found (tried: %s)" % ", ".join(DIR_CANDIDATES))
+        print("       pass it explicitly: python3 tests/run_test_cases.py <dir>")
         sys.exit(2)
     if not os.access(BIN, os.X_OK):
         print(f"error: build the app first  ({BIN})")
