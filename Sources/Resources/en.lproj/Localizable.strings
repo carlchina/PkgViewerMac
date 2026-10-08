@@ -32,7 +32,7 @@
 "overview.noCover" = "No cover art";
 "overview.logo" = "Publisher logo";
 "overview.spec" = "SPEC";
-"overview.galleryNote" = "%d image(s) found in sce_sys — click a thumbnail to swap.";
+"overview.galleryNote" = "%d image(s) found in the package — click a thumbnail to swap.";
 
 /* MARK: - Files */
 "files.filter" = "Filter by name";

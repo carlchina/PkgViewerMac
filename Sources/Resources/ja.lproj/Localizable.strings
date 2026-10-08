@@ -30,7 +30,7 @@
 "overview.noCover" = "カバーなし";
 "overview.logo" = "パブリッシャーロゴ";
 "overview.spec" = "仕様";
-"overview.galleryNote" = "sce_sys に %d 枚の画像があります — サムネイルで切り替えられます。";
+"overview.galleryNote" = "パッケージ内に %d 枚の画像があります — サムネイルで切り替えられます。";
 
 /* MARK: - ファイル */
 "files.filter" = "名前で絞り込み";

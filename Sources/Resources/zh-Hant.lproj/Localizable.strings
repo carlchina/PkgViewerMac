@@ -30,7 +30,7 @@
 "overview.noCover" = "無封面";
 "overview.logo" = "發行商標誌";
 "overview.spec" = "規格";
-"overview.galleryNote" = "在 sce_sys 中發現 %d 張圖片 — 點擊縮圖切換。";
+"overview.galleryNote" = "在套件內發現 %d 張圖片 — 點擊縮圖切換。";
 
 /* MARK: - 檔案 */
 "files.filter" = "依名稱篩選";
