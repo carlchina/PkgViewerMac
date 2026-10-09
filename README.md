@@ -86,12 +86,13 @@ BUILD=42 ./build.sh        # set an exact one
 | PS3 | `.pkg` (NPDRM) | retail and debug, AES / SHA-1 decryption |
 | PS5 | bare `.ucp` / `.trp` | trophy archives read on their own |
 | — | game folders | `sce_sys/param.json`, `PS3_GAME/`, NPDRM extracts |
-| PS5 | `.ffpfsc`, `.ffpkg` | not supported — need external tools |
+| PS5 | `.ffpkg` | UFS2 image — metadata and key art |
+| PS5 | `.ffpfsc` | not supported — needs the mkpfs decompressor |
 | Switch | `.nsp`, `.xci` | packages and gamecard images |
 | Switch | `.nsz`, `.xcz` | the compressed forms of the above |
 
-The last unsupported row reports a clear reason in the UI rather than failing
-silently.
+The one unsupported format, `.ffpfsc`, reports the reason in the UI rather
+than failing silently.
 
 Switch metadata comes from the package's `cnmt.xml` or the binary CNMT inside
 its Meta NCA. Installing `prod.keys` at `~/.switch/prod.keys` additionally

@@ -30,7 +30,12 @@ enum PkgLoader {
             return failure(url, Message("err.ffpfscUnsupported"))
         }
         if ext == "ffpkg" {
-            return failure(url, Message("err.ffpkgUnsupported"))
+            // Runs before the shared reader below exists, and needs its own
+            // handle anyway: the image is the whole file.
+            guard let r = FileHandleReader(url: url) else {
+                return failure(url, Message("err.cannotOpen"))
+            }
+            return parseFFPKG(url, reader: r, size: size)
         }
         // A bare trophy archive, as pulled out of a package by a dumper.
         if ext == "ucp" || ext == "trp" {
@@ -496,6 +501,59 @@ enum PkgLoader {
     static func isImageData(_ d: Data) -> Bool {
         if d.prefix(4) == Data([0x89, 0x50, 0x4E, 0x47]) { return true }
         return d.prefix(3) == Data([0xFF, 0xD8, 0xFF])
+    }
+
+    /// PS5 `.ffpkg`: a UFS2 image whose metadata is `/sce_sys/param.json` and
+    /// whose key art is the PNGs beside it.
+    ///
+    /// This is a filesystem image, not an archive, so it needs a filesystem
+    /// reader. The original hands that to pytsk3; here `UFS2` walks the image
+    /// directly. Anything that is not a readable UFS2 image falls back to the
+    /// "not available" message rather than pretending to be an empty package.
+    private static func parseFFPKG(_ url: URL, reader: FileHandleReader, size: Int64) -> PkgResult {
+        guard let fs = UFS2(reader: reader, size: size) else {
+            return failure(url, Message("err.ffpkgUnsupported"))
+        }
+        var meta: [String: MetaValue] = [:]
+        var title = ""
+        var extra: [(String, String)] = []
+        if let ino = fs.lookup("/sce_sys/param.json"),
+           let raw = fs.readFile(ino, max: 100_000),
+           let obj = try? JSONSerialization.jsonObject(with: raw) as? [String: Any] {
+            meta = Dictionary(uniqueKeysWithValues: obj.map { ($0.key, MetaValue.from($0.value)) })
+            let t = ParamJSON.meta(from: obj)
+            title = t.title
+            extra = t.rows
+        } else {
+            return failure(url, Message("err.ffpkgUnsupported"))
+        }
+
+        // Key art is read eagerly and kept in memory: the image handle closes
+        // as soon as parsing returns, exactly as the original does.
+        var entries: [PkgEntry] = []
+        if let dirIno = fs.lookup("/sce_sys") {
+            let pngs = fs.listDirectory(dirIno).filter { $0.name.lowercased().hasSuffix(".png") }
+            let ordered = pngs.filter { $0.name == "icon0.png" }
+                + pngs.filter { $0.name != "icon0.png" }
+            for e in ordered.prefix(12) {
+                let sz = fs.fileSize(e.inode)
+                guard sz > 0, sz <= 32_000_000,
+                      let d = fs.readFile(e.inode, max: Int(sz)),
+                      isImageData(d) else { continue }
+                entries.append(PkgEntry(id: entries.count, name: e.name, size: Int64(d.count),
+                                        source: .cached(d), codec: nil, isTrophyPack: false))
+            }
+        }
+
+        var rows: [(String, String)] = [("Platform", "PS5 ffpkg image"),
+                                        ("Size", Fmt.size(size))]
+        rows += extra
+        return PkgResult(kind: "ps5", path: url, fileSize: size,
+                         title: title.isEmpty ? url.lastPathComponent : title,
+                         rows: rows, entries: entries, meta: meta,
+                         iconName: "icon0.png",
+                         patchTid: meta.str("titleId") ?? "",
+                         ownVersion: meta.str("contentVersion") ?? "")
     }
 
     /// Cover candidates: prefer the declared icon, then any other PNG found in
