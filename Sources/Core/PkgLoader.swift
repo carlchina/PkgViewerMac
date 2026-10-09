@@ -51,7 +51,7 @@ enum PkgLoader {
             // actual cause instead of blaming the container — "not a valid
             // NSP" sends you looking for a corrupt file that is fine.
             if res.failed != nil, ["nsz", "xcz"].contains(ext) {
-                return failure(url, Message("err.nszUnsupported"))
+                return failure(url, Message("err.badNsz"))
             }
             return res
         }

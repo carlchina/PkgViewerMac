@@ -171,8 +171,12 @@ enum Switch {
             let sz = Self.u64le(raw, rec + 8)
             let nameOff = Int(Self.u32le(raw, rec + 16))
             guard nameOff < strtab.count else { return nil }
-            let slice = strtab[nameOff...]
-            guard let end = slice.firstIndex(of: 0) else { return nil }
+            // A missing NUL terminator is real, not corruption: nsz declares
+            // the string table a few bytes short of the names it holds, so the
+            // last entry runs to the end of the table. Taking the remainder is
+            // right; rejecting the whole container (as the original does) makes
+            // those packages unreadable for a 4-byte discrepancy.
+            let end = strtab[nameOff...].firstIndex(of: 0) ?? strtab.endIndex
             let name = String(decoding: strtab[nameOff..<end], as: UTF8.self)
             // Allow a little overrun (padding) but reject wild offsets.
             if off > UInt64(size) { return nil }
@@ -204,8 +208,9 @@ enum Switch {
             let sz = Self.u64le(raw, rec + 8)
             let nameOff = Int(Self.u32le(raw, rec + 16))
             guard nameOff < strtab.count else { continue }
-            let slice = strtab[nameOff...]
-            guard let end = slice.firstIndex(of: 0) else { continue }
+            // Same tolerance as PFS0: an unterminated name takes the rest of
+            // the table rather than dropping the entry.
+            let end = strtab[nameOff...].firstIndex(of: 0) ?? strtab.endIndex
             let nm = String(decoding: strtab[nameOff..<end], as: UTF8.self)
             guard !nm.isEmpty else { continue }
             if eOff > UInt64(size) { continue }
@@ -686,6 +691,12 @@ enum Switch {
             let ln = entries[i].name.lowercased()
             if ln.hasSuffix(".tik") { entries[i].codec = "ticket" }
             else if ln.hasSuffix(".cert") { entries[i].codec = "cert" }
+            else if ln.hasSuffix(".ncz") {
+                // NSZ replaces NCA bodies with zstd-compressed NCZ; the header
+                // is gone with them, so no type or NACP can be recovered from
+                // this entry — but the listing should still say why.
+                entries[i].codec = "NCZ · compressed"
+            }
             else if ln.hasSuffix(".nca") {
                 let stem = Self.stem(entries[i].name)
                 if let t = typeById[stem], !t.isEmpty { entries[i].codec = t }
@@ -911,8 +922,10 @@ enum Switch {
             let sub = hfs0Entries(r, at: base, size: size, prefix: pname)
             entries += sub
         }
-        for i in entries.indices where entries[i].name.lowercased().hasSuffix(".nca") {
-            if entries[i].codec == nil { entries[i].codec = "NCA" }
+        for i in entries.indices {
+            let ln = entries[i].name.lowercased()
+            if ln.hasSuffix(".ncz") { entries[i].codec = "NCZ · compressed" }
+            else if ln.hasSuffix(".nca"), entries[i].codec == nil { entries[i].codec = "NCA" }
         }
 
         let fname = titleFromFilename(url)

@@ -140,7 +140,7 @@
 "err.ps3NotNpDrm" = "PS3 NPDRM パッケージではありません（種類 %@）";
 "err.badNsp" = "有効な NSP（PFS0）パッケージではありません";
 "err.badXci" = "有効な XCI ゲームカードイメージではありません";
-"err.nszUnsupported" = "NSZ/XCZ は圧縮形式です（NCA 本体が NCZ に再パック済み）— 未対応です";
+"err.badNsz" = "この NSZ/XCZ を読み取れません — ファイルテーブルが一致しません";
 
 /* MARK: - スクリーンショット */
 "app.screenshot" = "スクリーンショット";

@@ -142,7 +142,7 @@
 "err.ps3NotNpDrm" = "Not a PS3 NPDRM package (type %@)";
 "err.badNsp" = "Not a valid NSP (PFS0) package";
 "err.badXci" = "Not a valid XCI gamecard image";
-"err.nszUnsupported" = "NSZ/XCZ is a compressed format (NCA bodies are re-packed as NCZ) — not supported yet";
+"err.badNsz" = "Could not read this NSZ/XCZ — its file table does not add up";
 
 /* MARK: - Screenshot */
 "app.screenshot" = "Screenshot";
