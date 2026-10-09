@@ -135,7 +135,7 @@
 "err.noCNT" = "CNT コンテナが見つかりません — 暗号化されたリテール断片の可能性があります。";
 "err.badExfat" = "有効な exFAT イメージではありません";
 "err.ffpfscUnsupported" = "ffpfsc には mkpfs 展開ツールが必要ですが、このビルドには含まれていません";
-"err.ffpkgUnsupported" = "このビルドは ffpkg（UFS2）に対応していません";
+"err.badFfpkg" = "この ffpkg を読み取れません — UFS2 イメージとして読めない、または sce_sys/param.json がありません";
 "err.ps3TooSmall" = "PS3 PKG として小さすぎます";
 "err.ps3NotNpDrm" = "PS3 NPDRM パッケージではありません（種類 %@）";
 "err.badNsp" = "有効な NSP（PFS0）パッケージではありません";

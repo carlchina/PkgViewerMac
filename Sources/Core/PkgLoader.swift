@@ -512,7 +512,7 @@ enum PkgLoader {
     /// "not available" message rather than pretending to be an empty package.
     private static func parseFFPKG(_ url: URL, reader: FileHandleReader, size: Int64) -> PkgResult {
         guard let fs = UFS2(reader: reader, size: size) else {
-            return failure(url, Message("err.ffpkgUnsupported"))
+            return failure(url, Message("err.badFfpkg"))
         }
         var meta: [String: MetaValue] = [:]
         var title = ""
@@ -525,7 +525,7 @@ enum PkgLoader {
             title = t.title
             extra = t.rows
         } else {
-            return failure(url, Message("err.ffpkgUnsupported"))
+            return failure(url, Message("err.badFfpkg"))
         }
 
         // Key art is read eagerly and kept in memory: the image handle closes

@@ -137,7 +137,7 @@
 "err.noCNT" = "No CNT container found — this looks like an encrypted retail stub.";
 "err.badExfat" = "Not a valid exFAT image";
 "err.ffpfscUnsupported" = "ffpfsc needs the mkpfs decompressor — not bundled in this build";
-"err.ffpkgUnsupported" = "ffpkg (UFS2) support is not available in this build";
+"err.badFfpkg" = "Could not read this ffpkg — not a readable UFS2 image, or sce_sys/param.json is missing";
 "err.ps3TooSmall" = "Too small for a PS3 PKG";
 "err.ps3NotNpDrm" = "Not a PS3 NPDRM package (type %@)";
 "err.badNsp" = "Not a valid NSP (PFS0) package";
