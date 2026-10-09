@@ -18,10 +18,10 @@ learned from.
 
 ## Install
 
-Download `PkgViewer-1.2-universal.zip` from the [releases](https://github.com/carlchina/PkgViewerMac/releases), then:
+Download `PkgViewer-1.2.1-universal.zip` from the [releases](https://github.com/carlchina/PkgViewerMac/releases), then:
 
 ```bash
-unzip PkgViewer-1.2-universal.zip
+unzip PkgViewer-1.2.1-universal.zip
 xattr -r -d com.apple.quarantine PkgViewer.app     # see the note below
 open PkgViewer.app
 ```
@@ -66,7 +66,7 @@ ARCHS=x86_64 ./build.sh         # Intel only
 The script verifies the architectures in the finished binary against `ARCHS`
 and fails if they do not match, so a single-arch result cannot ship unnoticed.
 
-Each build bumps the number in parentheses after the version (`1.2 (1)`), so a
+Each build bumps the number in parentheses after the version (`1.2.1 (1)`), so a
 screenshot or a bug report can be tied to an exact binary. The counter is read
 back from the previous bundle, which means a fresh clone starts at `1` and a
 deleted `build/` restarts there too. For a release, freeze it:
