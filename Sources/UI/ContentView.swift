@@ -120,8 +120,12 @@ struct PkgViewerApp: App {
                 // A language change must reach the trophy text too: the packs
                 // are read in the interface language, so a stale tag list would
                 // leave the list in the previous language until the next reload.
+                // The Switch title has the same shape of problem — it was
+                // picked at parse time — so it re-picks from the NACP titles
+                // kept in the result's meta.
                 .onChange(of: l10n.languageCode) { _ in
                     vm.l10nTags = l10n.effectiveLanguageTags
+                    vm.retitleForLanguage()
                     vm.reloadTrophies()
                 }
         }

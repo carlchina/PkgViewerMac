@@ -624,8 +624,13 @@ enum Switch {
     }
 
     /// Pick the NACP title for the interface language, falling back to English.
-    static func preferred(_ dict: [String: String]) -> String {
-        for tag in Locale.preferredLanguages {
+    ///
+    /// `tags` defaults to the system languages, but callers that know the
+    /// pinned interface language should pass it — the app language and the
+    /// system language can differ, and the title must follow the app.
+    static func preferred(_ dict: [String: String],
+                          tags: [String] = Locale.preferredLanguages) -> String {
+        for tag in tags {
             let t = tag.lowercased()
             let want: String
             switch t.prefix(2) {

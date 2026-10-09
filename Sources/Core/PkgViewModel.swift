@@ -116,7 +116,29 @@ final class PkgViewModel: ObservableObject {
         coverImages = loaded.covers
         isLoading = false
         if let f = loaded.result.failed { errorText = f }
+        retitleForLanguage()
         pushHistory(url)
+    }
+
+    /// Re-pick the NACP title for the newly chosen interface language.
+    ///
+    /// `result.title` is computed once at parse time and never follows a
+    /// language change on its own — the spec rows re-render through L10n, but
+    /// the title is package data. All 16 NACP titles are kept in the result's
+    /// meta, so the re-pick costs nothing and never re-opens the file. It must
+    /// run on the *app* language (`l10nTags`), not the system languages: the
+    /// two differ exactly when this matters.
+    func retitleForLanguage() {
+        guard let res = result, !res.meta.isEmpty else { return }
+        var titles: [String: String] = [:]
+        for (k, v) in res.meta {
+            guard k.hasPrefix("NACP title "),
+                  case .string(let s) = v, !s.isEmpty else { continue }
+            titles[String(k.dropFirst("NACP title ".count))] = s
+        }
+        guard !titles.isEmpty else { return }
+        let picked = Switch.preferred(titles, tags: l10nTags)
+        if !picked.isEmpty, picked != res.title { result?.title = picked }
     }
 
     func openMany(_ urls: [URL]) {
