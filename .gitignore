@@ -12,3 +12,7 @@ build/
 # Local scratch
 *.log
 .DS_Store?
+
+# Release attachments: the zipped .app is a build product, uploaded to the
+# release rather than kept in the repository.
+*.zip

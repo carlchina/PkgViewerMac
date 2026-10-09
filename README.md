@@ -18,10 +18,10 @@ learned from.
 
 ## Install
 
-Download `PkgViewer-1.1-universal.zip` from the [releases](https://github.com/carlchina/PkgViewerMac/releases), then:
+Download `PkgViewer-1.2-universal.zip` from the [releases](https://github.com/carlchina/PkgViewerMac/releases), then:
 
 ```bash
-unzip PkgViewer-1.1-universal.zip
+unzip PkgViewer-1.2-universal.zip
 xattr -r -d com.apple.quarantine PkgViewer.app     # see the note below
 open PkgViewer.app
 ```
@@ -66,7 +66,7 @@ ARCHS=x86_64 ./build.sh         # Intel only
 The script verifies the architectures in the finished binary against `ARCHS`
 and fails if they do not match, so a single-arch result cannot ship unnoticed.
 
-Each build bumps the number in parentheses after the version (`1.1 (7)`), so a
+Each build bumps the number in parentheses after the version (`1.2 (1)`), so a
 screenshot or a bug report can be tied to an exact binary. The counter is read
 back from the previous bundle, which means a fresh clone starts at `1` and a
 deleted `build/` restarts there too. For a release, freeze it:
@@ -87,8 +87,17 @@ BUILD=42 ./build.sh        # set an exact one
 | PS5 | bare `.ucp` / `.trp` | trophy archives read on their own |
 | — | game folders | `sce_sys/param.json`, `PS3_GAME/`, NPDRM extracts |
 | PS5 | `.ffpfsc`, `.ffpkg` | not supported — need external tools |
+| Switch | `.nsp`, `.xci` | packages and gamecard images |
+| Switch | `.nsz`, `.xcz` | the compressed forms of the above |
 
-The last row reports a clear reason in the UI rather than failing silently.
+The last unsupported row reports a clear reason in the UI rather than failing
+silently.
+
+Switch metadata comes from the package's `cnmt.xml` or the binary CNMT inside
+its Meta NCA. Installing `prod.keys` at `~/.switch/prod.keys` additionally
+unlocks the official NACP title, publisher, display version and icon, and the
+authoritative per-NCA types. Entries an NSZ re-packed as `.ncz` are listed as
+compressed — their headers go with the compression.
 
 ## Features
 
