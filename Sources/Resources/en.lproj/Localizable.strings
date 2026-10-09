@@ -95,6 +95,11 @@
 "meta.pfsImage" = "PFS image";
 "meta.entries" = "Entries";
 "meta.titleId" = "Title ID";
+"meta.publisher" = "Publisher";
+"meta.titleVersion" = "Title Version";
+"meta.contents" = "Contents";
+"meta.ticketCert" = "Ticket/Cert";
+"meta.cnmtFile" = "CNMT file";
 "meta.contentId" = "Content ID";
 "meta.region" = "Region";
 "meta.type" = "Type";

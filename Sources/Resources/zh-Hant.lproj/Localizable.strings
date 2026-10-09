@@ -92,7 +92,12 @@
 "meta.size" = "大小";
 "meta.pfsImage" = "PFS 映像";
 "meta.entries" = "項目數";
-"meta.titleId" = "Title ID";
+"meta.titleId" = "標題 ID";
+"meta.publisher" = "發行商";
+"meta.titleVersion" = "原始版本號";
+"meta.contents" = "內容構成";
+"meta.ticketCert" = "票券/憑證";
+"meta.cnmtFile" = "CNMT 檔案";
 "meta.contentId" = "Content ID";
 "meta.region" = "區域";
 "meta.type" = "類型";

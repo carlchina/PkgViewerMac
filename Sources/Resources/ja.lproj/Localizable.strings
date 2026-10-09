@@ -92,7 +92,12 @@
 "meta.size" = "サイズ";
 "meta.pfsImage" = "PFS イメージ";
 "meta.entries" = "エントリ数";
-"meta.titleId" = "Title ID";
+"meta.titleId" = "タイトル ID";
+"meta.publisher" = "発売元";
+"meta.titleVersion" = "タイトルバージョン";
+"meta.contents" = "内容構成";
+"meta.ticketCert" = "チケット/証明書";
+"meta.cnmtFile" = "CNMT ファイル";
 "meta.contentId" = "Content ID";
 "meta.region" = "地域";
 "meta.type" = "種類";

@@ -92,7 +92,12 @@
 "meta.size" = "大小";
 "meta.pfsImage" = "PFS 镜像";
 "meta.entries" = "条目数";
-"meta.titleId" = "Title ID";
+"meta.titleId" = "标题 ID";
+"meta.publisher" = "发行商";
+"meta.titleVersion" = "原始版本号";
+"meta.contents" = "内容构成";
+"meta.ticketCert" = "票据/证书";
+"meta.cnmtFile" = "CNMT 文件";
 "meta.contentId" = "Content ID";
 "meta.region" = "区域";
 "meta.type" = "类型";
