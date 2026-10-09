@@ -61,6 +61,7 @@ enum PkgLoader {
 
         switch PkgParser.detect(magic) {
         case .fih:  return PkgParser.parseFIH(reader, size: size)
+        case .lih:  return PkgParser.parseLIH(reader, size: size)
         case .cnt:  return PkgParser.parseCNT(reader, size: size)
         case .ps3:  return PkgParser.parsePS3(reader, size: size)
         case .exfat: return parseExfat(reader, size: size)

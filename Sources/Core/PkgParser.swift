@@ -15,6 +15,11 @@ struct CntEntry {
 
 enum PkgFormat {
     static let fihMagic: [UInt8] = [0x7F, 0x46, 0x49, 0x48]  // \x7FFIH
+    /// PS5 **patch** packages wrap the FIH/CNT pair in this header instead of
+    /// starting with the FIH. The wrapper carries both offsets (FIH at 0x10,
+    /// embedded CNT at 0x30); the FIH's own emb field points past EOF there,
+    /// which is why a patch was reported as an unrecognised format.
+    static let lihMagic: [UInt8] = [0x7F, 0x4C, 0x49, 0x48]  // \x7FLIH
     static let cntMagic: [UInt8] = [0x7F, 0x43, 0x4E, 0x54]  // \x7FCNT
     /// PS3 NPDRM packages are `\x7FPKG` — the letter K, not N. This was
     /// previously `\x7FPNG`, which matched no real file and sent every PS3
@@ -96,6 +101,7 @@ enum PkgParser {
         if b.count >= 4 {
             let head = Array(b[0..<4])
             if head == PkgFormat.fihMagic { return .fih }
+            if head == PkgFormat.lihMagic { return .lih }
             if head == PkgFormat.cntMagic { return .cnt }
             if head == PkgFormat.ps3Magic { return .ps3 }
             if head == UCP.magic { return .ucp }
@@ -104,7 +110,7 @@ enum PkgParser {
         return .unknown
     }
 
-    enum PkgFormat2 { case fih, cnt, ps3, exfat, ucp, unknown }
+    enum PkgFormat2 { case fih, lih, cnt, ps3, exfat, ucp, unknown }
 
     // MARK: Entry tables
 
@@ -138,15 +144,24 @@ enum PkgParser {
     // MARK: PS5 FIH
 
     /// PS5 retail/dump PKG: FIH header wrapping a CNT container.
-    static func parseFIH(_ reader: FileHandleReader, size: Int64) -> PkgResult {
-        guard let hdr = reader.read(at: 0, count: 256) else {
+    /// `base` is where the FIH starts — 0 for a plain package, 0x10000 under a
+    /// patch's `\x7FLIH` wrapper. `embOverride` supplies the embedded CNT
+    /// offset for wrappers where the FIH's own emb field cannot be used.
+    static func parseFIH(_ reader: FileHandleReader, size: Int64,
+                         base: UInt64 = 0, embOverride: UInt64? = nil) -> PkgResult {
+        guard let hdr = reader.read(at: base, count: 256) else {
             return PkgResult(kind: "ps5", path: reader.url, fileSize: size, title: reader.url.lastPathComponent, rows: [], failed: Message("err.cannotReadHeader"))
         }
         let r = ByteReader(hdr)
-        let emb = r.u64le(at: 0x58) ?? 0
+        let emb = embOverride ?? (r.u64le(at: 0x58) ?? 0)
         let signed = r.u8(at: 5) ?? 0
         let pfsOff = r.u64le(at: 0x10) ?? 0
-        let pfsSize = r.u64le(at: 0x18) ?? 0
+        var pfsSize = r.u64le(at: 0x18) ?? 0
+        // A patch declares the size of the image it patches *to*, which is far
+        // larger than the delta it actually ships. Fall back to the span this
+        // file really holds, so the row describes the file rather than a
+        // package that is not here.
+        if pfsSize > UInt64(size), emb > base { pfsSize = emb - base }
 
         guard let chdr = reader.read(at: emb, count: 0x80),
               let cr = ByteReader(chdr).u32be(at: 0x10),
@@ -180,7 +195,7 @@ enum PkgParser {
             ("Package", signed == 0x80 ? "OFC (Official)" : "FPKG (Fake)"),
             ("Signature", signed == 0x80 ? "official" : "debug"),
             ("Size", Fmt.size(size)),
-            ("PFS image", "\(Fmt.size(Int64(pfsSize))) @ \(hex(pfsOff))"),
+            ("PFS image", "\(Fmt.size(Int64(pfsSize))) @ \(hex(base &+ pfsOff))"),
             ("Entries", String(ents.count)),
         ]
         rows += extra
@@ -198,6 +213,41 @@ enum PkgParser {
             patchTid: meta.str("titleId"),
             ownVersion: meta.str("contentVersion")
         )
+    }
+
+    // MARK: PS5 patch wrapper
+
+    /// A PS5 **patch** package: the FIH and its embedded CNT are reached
+    /// through a `\x7FLIH` wrapper that names both offsets (FIH at 0x10, CNT
+    /// at 0x30).
+    ///
+    /// Handing this to `parseFIH` unmodified fails: the FIH's emb field
+    /// describes the finished image and points far past EOF on a delta, so the
+    /// CNT — and with it every piece of metadata — was never found.
+    static func parseLIH(_ reader: FileHandleReader, size: Int64) -> PkgResult {
+        guard let hdr = reader.read(at: 0, count: 256) else {
+            return PkgResult(kind: "ps5", path: reader.url, fileSize: size,
+                             title: reader.url.lastPathComponent, rows: [],
+                             failed: Message("err.cannotReadHeader"))
+        }
+        let r = ByteReader(hdr)
+        // Both offsets are 32-bit. Reading the FIH one as a u64 swallowed the
+        // next field and produced 0xe7700010000 — a plausible-looking address
+        // that is nowhere near the header.
+        let fihOff = UInt64(r.u32le(at: 0x10) ?? 0)
+        let cntOff = UInt64(r.u32le(at: 0x30) ?? 0)
+        guard fihOff >= 0x10, cntOff > fihOff, cntOff < UInt64(size) else {
+            return PkgResult(kind: "ps5", path: reader.url, fileSize: size,
+                             title: reader.url.lastPathComponent, rows: [],
+                             failed: Message("err.noCNT"))
+        }
+        var res = parseFIH(reader, size: size, base: fihOff, embOverride: cntOff)
+        // Say which flavour it is: these are the update packages, and the FIH
+        // parser cannot tell them apart from a full image on its own.
+        if let i = res.rows.firstIndex(where: { $0.0 == "Platform" }), res.failed == nil {
+            res.rows[i] = ("Platform", "PS5 (patch, LIH-wrapped FIH)")
+        }
+        return res
     }
 
     // MARK: PS4 CNT
