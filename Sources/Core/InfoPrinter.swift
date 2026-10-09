@@ -43,6 +43,11 @@ enum InfoPrinter {
     /// than re-deriving it.
     static func printCovers(_ url: URL, exportTo dir: URL?) {
         let res = PkgLoader.load(url: url)
+        // CLI output stays English by design (stable, greppable contract).
+        if let f = res.failed {
+            print("ERROR: \(f.english())")
+            return
+        }
         guard let handle = FileHandleReader(url: res.path) else {
             print("ERROR: cannot open \(res.path.lastPathComponent) for reading")
             return

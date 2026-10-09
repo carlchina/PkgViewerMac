@@ -45,7 +45,15 @@ enum PkgLoader {
         // renamed dump still opens. An NSP is a PFS0 container at offset 0; an
         // XCI keeps its magic at 0x100 and starts with a padding block.
         if magic.prefix(4) == Switch.pfs0Magic {
-            return Switch.parseNSP(url, reader, size: size)
+            let res = Switch.parseNSP(url, reader, size: size)
+            // A real NSZ keeps a PFS0 header, but its file table points into
+            // compressed NCZ blocks, so the table does not add up. Report the
+            // actual cause instead of blaming the container — "not a valid
+            // NSP" sends you looking for a corrupt file that is fine.
+            if res.failed != nil, ["nsz", "xcz"].contains(ext) {
+                return failure(url, Message("err.nszUnsupported"))
+            }
+            return res
         }
         if let at100 = reader.read(at: 0x100, count: 4), at100 == Switch.xciMagic {
             return Switch.parseXCI(url, reader, size: size)

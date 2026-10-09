@@ -135,6 +135,7 @@
 "err.ps3NotNpDrm" = "不是 PS3 NPDRM 安裝包（類型 %@）";
 "err.badNsp" = "不是有效的 NSP（PFS0）安裝包";
 "err.badXci" = "不是有效的 XCI 卡帶映像";
+"err.nszUnsupported" = "NSZ/XCZ 為壓縮格式（NCA 主體重新封裝為 NCZ），暫不支援";
 
 /* MARK: - 截圖 */
 "app.screenshot" = "截圖";

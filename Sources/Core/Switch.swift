@@ -812,7 +812,14 @@ enum Switch {
             for (k, v) in nacp.titles { meta["NACP title \(k)"] = .string(v) }
             if !nacp.displayVersion.isEmpty { meta["DisplayVersion"] = .string(nacp.displayVersion) }
             if let icon = nacp.icon, !icon.isEmpty {
-                nacpIcon = (nacp.iconName.isEmpty ? "icon.jpg" : nacp.iconName, icon)
+                // The archive calls these `icon_<Lang>.dat`, but they are
+                // JPEGs, and cover picking goes by extension — keeping .dat
+                // made the icon invisible in the gallery. Renamed to .jpg,
+                // which is also what the original reports.
+                let nm = nacp.iconName.isEmpty
+                    ? "icon.jpg"
+                    : (nacp.iconName as NSString).deletingPathExtension + ".jpg"
+                nacpIcon = (nm, icon)
             }
         }
 
@@ -911,6 +918,7 @@ enum Switch {
         var tid = fname.tid
         var ver = fname.ver
         var ctype = ""
+        var controlOff: UInt64?
         if let keys {
             // The secure partition's Meta NCA carries the base title's binary
             // CNMT. An XCI has no ticket, so titlekey sections stay encrypted
@@ -934,6 +942,8 @@ enum Switch {
                 if !(entries[i].codec ?? "").contains(" · ") {
                     entries[i].codec = "\(tname) · \(sfx)"
                 }
+                // Content type 2 is the Control NCA — the one holding NACP.
+                if det.ctype == 2, controlOff == nil { controlOff = entries[i].absOff }
             }
         }
 
@@ -953,18 +963,57 @@ enum Switch {
             rows.append(("NCA details", "needs prod.keys (~/.switch/prod.keys)"))
         }
 
-        let list = entries.enumerated().map { i, e in
-            PkgEntry(id: i, name: e.name, size: Int64(e.size),
-                     source: .offset(e.absOff), codec: e.codec, isTrophyPack: false)
-        }
-        let meta: [String: MetaValue] = [
+        var meta: [String: MetaValue] = [
             "TitleId": .string(tid),
             "Version": .string(ver),
             "Partitions": .string(partitions.joined(separator: ", ")),
         ]
+
+        // NACP from the Control NCA, the same way an NSP gets it. An XCI has
+        // no ticket, so a titlekey-crypto Control NCA simply yields nothing
+        // and the filename title stands.
+        var nacpIcon: (name: String, data: Data)?
+        if let keys, let coff = controlOff,
+           let nacp = ncaControlInfo(r, at: coff, ticket: nil, keys: keys) {
+            let official = Self.preferred(nacp.titles)
+            if !official.isEmpty { title = official }
+            let pub = Self.preferred(nacp.publishers)
+            if !pub.isEmpty, let at = rows.firstIndex(where: { $0.0 == "Title ID" }) {
+                rows.insert(("Publisher", pub), at: at + 1)
+            }
+            let disp = nacp.displayVersion
+            if !disp.isEmpty, let vi = rows.firstIndex(where: { $0.0 == "Version" }) {
+                rows[vi] = ("Version", disp.lowercased().hasPrefix("v") ? disp : "v\(disp)")
+                if let raw = UInt64(ver), raw > 0 {
+                    rows.insert(("Title Version", "\(raw)"), at: vi + 1)
+                }
+                ver = disp.lowercased().hasPrefix("v") ? String(disp.dropFirst()) : disp
+                meta["Version"] = .string(ver)
+            }
+            for (k, v) in nacp.titles { meta["NACP title \(k)"] = .string(v) }
+            if !nacp.displayVersion.isEmpty { meta["DisplayVersion"] = .string(nacp.displayVersion) }
+            if let icon = nacp.icon, !icon.isEmpty {
+                let nm = nacp.iconName.isEmpty
+                    ? "icon.jpg"
+                    : (nacp.iconName as NSString).deletingPathExtension + ".jpg"
+                nacpIcon = (nm, icon)
+            }
+        }
+
+        var list = entries.enumerated().map { i, e in
+            PkgEntry(id: i, name: e.name, size: Int64(e.size),
+                     source: .offset(e.absOff), codec: e.codec, isTrophyPack: false)
+        }
+        if let ic = nacpIcon {
+            list.append(PkgEntry(id: list.count, name: ic.name, size: Int64(ic.data.count),
+                                 source: .cached(ic.data), codec: "JPEG", isTrophyPack: false))
+            if let ei = rows.firstIndex(where: { $0.0 == "Entries" }) {
+                rows[ei] = ("Entries", "\(list.count)")
+            }
+        }
         return PkgResult(kind: "switch", path: url, fileSize: size,
                          title: title, rows: rows, entries: list, meta: meta,
-                         iconName: "", patchTid: tid, ownVersion: ver)
+                         iconName: nacpIcon?.name ?? "", patchTid: tid, ownVersion: ver)
     }
 
     /// Filename without directories or extension, lowercased — CNMT content
