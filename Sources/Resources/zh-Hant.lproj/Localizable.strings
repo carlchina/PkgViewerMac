@@ -134,7 +134,7 @@
 "err.unknownMagic" = "無法辨識的檔案格式（magic %@）";
 "err.noCNT" = "未找到 CNT 容器 — 這看起來是加密的零售版殘片。";
 "err.badExfat" = "不是有效的 exFAT 映像";
-"err.ffpfscUnsupported" = "ffpfsc 需要 mkpfs 解壓器，本版本未附帶。";
+"err.badFfpfsc" = "無法解析這個 ffpfsc — 不是可讀的 PFS 映像，或缺少 sce_sys/param.json";
 "err.badFfpkg" = "無法解析這個 ffpkg — 不是可讀的 UFS2 映像，或缺少 sce_sys/param.json";
 "err.ps3TooSmall" = "檔案過小，不是有效的 PS3 PKG";
 "err.ps3NotNpDrm" = "不是 PS3 NPDRM 安裝包（類型 %@）";

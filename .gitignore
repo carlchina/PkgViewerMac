@@ -16,3 +16,7 @@ build/
 # Release attachments: the zipped .app is a build product, uploaded to the
 # release rather than kept in the repository.
 *.zip
+
+# Release-note drafts: read by `gh release create --notes-file`, but the
+# published notes live on the release page, not in the tree.
+notes-v*.md

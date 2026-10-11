@@ -136,7 +136,7 @@
 "err.unknownMagic" = "Unrecognised file format (magic %@)";
 "err.noCNT" = "No CNT container found — this looks like an encrypted retail stub.";
 "err.badExfat" = "Not a valid exFAT image";
-"err.ffpfscUnsupported" = "ffpfsc needs the mkpfs decompressor — not bundled in this build";
+"err.badFfpfsc" = "Could not read this ffpfsc — not a PFS image, or sce_sys/param.json is missing";
 "err.badFfpkg" = "Could not read this ffpkg — not a readable UFS2 image, or sce_sys/param.json is missing";
 "err.ps3TooSmall" = "Too small for a PS3 PKG";
 "err.ps3NotNpDrm" = "Not a PS3 NPDRM package (type %@)";

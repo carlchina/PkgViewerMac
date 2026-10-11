@@ -1,8 +1,9 @@
 import Foundation
 
 /// Format dispatch + cover-art / file extraction. Mirrors parse_pkg() in the
-/// Python original, minus the formats that need third-party binaries
-/// (ffpfsc needs mkpfs, ffpkg needs pytsk3) which now report a clear message.
+/// Python original. PS5 images that the original offloaded to external tools are
+/// now parsed inline with pure-Swift readers: `ffpfsc` via `PFS`+`PFSCView`,
+/// and `ffpkg` via `UFS2`.
 enum PkgLoader {
 
     static let supportedExtensions = ["pkg", "exfat", "ffpfsc", "ffpkg", "nsp", "xci"]
@@ -27,7 +28,12 @@ enum PkgLoader {
         let ext = url.pathExtension.lowercased()
 
         if ext == "ffpfsc" {
-            return failure(url, Message("err.ffpfscUnsupported"))
+            // Runs before the shared reader below exists, and needs its own
+            // handle anyway: the image is the whole file.
+            guard let r = FileHandleReader(url: url) else {
+                return failure(url, Message("err.cannotOpen"))
+            }
+            return parseFFPFSC(url, reader: r, size: size)
         }
         if ext == "ffpkg" {
             // Runs before the shared reader below exists, and needs its own
@@ -552,8 +558,99 @@ enum PkgLoader {
                          title: title.isEmpty ? url.lastPathComponent : title,
                          rows: rows, entries: entries, meta: meta,
                          iconName: "icon0.png",
-                         patchTid: meta.str("titleId") ?? "",
-                         ownVersion: meta.str("contentVersion") ?? "")
+                         patchTid: meta.str("titleId"),
+                         ownVersion: meta.str("contentVersion"))
+    }
+
+    /// PS5 `.ffpfsc`: a PFS image wrapping a single PFSC-compressed
+    /// `pfs_image.dat` inode, which decodes to an inner PFS holding `sce_sys/`.
+    ///
+    /// The inner image is opened lazily through the on-demand `PFSCView`, so the
+    /// multi-gigabyte payload is never materialised — only the blocks behind
+    /// `param.json` and the cover PNGs are ever read. (The original runs this
+    /// through mkpfs; here the pure-Swift `PFS`/`PFSCView` readers do it inline.)
+    private static func parseFFPFSC(_ url: URL, reader: FileHandleReader, size: Int64) -> PkgResult {
+        guard let outer = PFS(reader: reader) else {
+            return failure(url, Message("err.badFfpfsc"))
+        }
+        // The single inner file, `pfs_image.dat`, is PFSC-compressed. Open it as
+        // a reader (not bytes) so the inner PFS reads straight off the PFSCView.
+        guard let innerReader = outer.fileReader("pfs_image.dat"),
+              let inner = PFS(reader: innerReader) else {
+            return failure(url, Message("err.badFfpfsc"))
+        }
+
+        var meta: [String: MetaValue] = [:]
+        var title = ""
+        var extra: [(String, String)] = []
+        if let raw = inner.fileData("sce_sys/param.json"),
+           raw.count > 0, raw.count < 100_000,
+           let obj = try? JSONSerialization.jsonObject(with: raw) as? [String: Any] {
+            meta = Dictionary(uniqueKeysWithValues: obj.map { ($0.key, MetaValue.from($0.value)) })
+            let t = ParamJSON.meta(from: obj)
+            title = t.title
+            extra = t.rows
+        } else {
+            return failure(url, Message("err.badFfpfsc"))
+        }
+
+        // Key art is read eagerly and kept in memory: the file handle closes as
+        // soon as parsing returns, exactly as parseFFPKG does for UFS2.
+        var entries: [PkgEntry] = []
+        let sce = inner.listDir("sce_sys").filter { !$0.isDir && $0.name.lowercased().hasSuffix(".png") }
+        let ordered = sce.filter { $0.name == "icon0.png" } + sce.filter { $0.name != "icon0.png" }
+        for e in ordered.prefix(12) {
+            let path = "sce_sys/\(e.name)"
+            guard let d = inner.fileData(path), d.count > 8, isImageData(d) else { continue }
+            entries.append(PkgEntry(id: entries.count, name: e.name, size: Int64(d.count),
+                                    source: .cached(d), codec: nil, isTrophyPack: false))
+        }
+
+        // Trophy packs live in the inner PFS under the same layout an exFAT
+        // image uses, so the trophies tab — which loads from `isTrophyPack`
+        // entries — works exactly as it does there. Only the blocks behind the
+        // .ucp are pulled through the PFSC view; the pack is small.
+        for pack in Self.ffpfscTrophyPacks(inner) {
+            entries.append(PkgEntry(id: entries.count, name: pack.name, size: Int64(pack.bytes.count),
+                                    source: .cached(pack.bytes), codec: nil, isTrophyPack: true))
+        }
+
+        var rows: [(String, String)] = [("Platform", "PS5 ffpfsc image"),
+                                        ("Size", Fmt.size(size))]
+        rows += extra
+        return PkgResult(kind: "ps5", path: url, fileSize: size,
+                         title: title.isEmpty ? url.lastPathComponent : title,
+                         rows: rows, entries: entries, meta: meta,
+                         iconName: "icon0.png",
+                         patchTid: meta.str("titleId"),
+                         ownVersion: meta.str("contentVersion"))
+    }
+
+    /// Locate the trophy archives inside a `.ffpfsc`'s inner PFS.
+    ///
+    /// A PS5 image ships two `.ucp` files side by side — `sce_sys/trophy2/
+    /// trophy00.ucp` (the trophies) and `sce_sys/uds/uds00.ucp` (user data) —
+    /// so both directories are listed and the view model later picks the real
+    /// trophy pack via `bestPack`. Only the first populated directory is used,
+    /// matching how `ExfatImage.scanTrophyPacks` prefers `sce_sys/trophy`.
+    private static func ffpfscTrophyPacks(_ inner: PFS) -> [(name: String, bytes: Data)] {
+        var out: [(name: String, bytes: Data)] = []
+        for dir in ["sce_sys/trophy2", "sce_sys/trophy", "trophy2", "trophy"] {
+            let found = inner.listDir(dir).filter {
+                // `._name` is an AppleDouble sidecar, not a real pack.
+                !$0.isDir && !$0.name.hasPrefix("._")
+                    && ($0.name.lowercased().hasSuffix(".ucp")
+                        || $0.name.lowercased().hasSuffix(".trp"))
+            }
+            if found.isEmpty { continue }
+            for e in found {
+                let path = "\(dir)/\(e.name)"
+                guard let d = inner.fileData(path), d.count > 0, d.count < 300_000_000 else { continue }
+                out.append((name: path, bytes: d))
+            }
+            if !out.isEmpty { break }
+        }
+        return out
     }
 
     /// Cover candidates: prefer the declared icon, then any other PNG found in

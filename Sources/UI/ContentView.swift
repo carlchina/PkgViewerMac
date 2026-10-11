@@ -62,6 +62,9 @@ struct PkgViewerApp: App {
         if let i = args.firstIndex(of: "--test-screenshot"), i + 1 < args.count {
             AppDelegate.testScreenshotPath = args[i + 1]
         }
+        if let i = args.firstIndex(of: "--tab"), i + 1 < args.count {
+            AppDelegate.initialTab = args[i + 1]
+        }
 
         // A bare path argument: the document scene only receives files handed
         // over by LaunchServices, so remember it for the first window.
@@ -73,7 +76,7 @@ struct PkgViewerApp: App {
         // open the output PNG as a package and die in the error pane.
         let valueFlags: Set<String> = ["--lang", "--info", "--covers",
                                        "--trophies", "--export-to",
-                                       "--locale", "--test-screenshot"]
+                                       "--locale", "--test-screenshot", "--tab"]
         var valueIdx = Set<Int>()
         for (i, a) in args.enumerated() where valueFlags.contains(a) {
             valueIdx.insert(i + 1)
@@ -206,6 +209,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     nonisolated(unsafe) static var launchURL: URL?
     /// Automated test screenshot output path, if passed via --test-screenshot.
     nonisolated(unsafe) static var testScreenshotPath: String?
+    /// Tab to preselect at launch, if passed via --tab (a test affordance).
+    nonisolated(unsafe) static var initialTab: String?
 
     static func consumeLaunchURL() -> URL? {
         defer { launchURL = nil }
@@ -304,8 +309,12 @@ struct ContentView: View {
             if let u = initialURL, vm.result?.path != u {
                 vm.open(u)
             }
+            if let want = AppDelegate.initialTab, let tab = PkgViewModel.Tab(rawValue: want) {
+                vm.selectedTab = tab
+                if tab == .trophies { vm.loadTrophiesIfNeeded() }
+            }
             if let outPath = AppDelegate.testScreenshotPath {
-                try? await Task.sleep(nanoseconds: 1_800_000_000)
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
                 if let data = WindowCapture.pngOfFrontmostWindow() {
                     try? data.write(to: URL(fileURLWithPath: outPath), options: .atomic)
                     print("==> Auto test screenshot saved to: \(outPath), contentTopOffset=\(SharedModel.contentTopOffset)")

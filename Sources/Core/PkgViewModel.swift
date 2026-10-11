@@ -117,6 +117,14 @@ final class PkgViewModel: ObservableObject {
         isLoading = false
         if let f = loaded.result.failed { errorText = f }
         retitleForLanguage()
+        // A trophy tab already on screen must pick up the new result:
+        // `loadTrophiesIfNeeded` guards on `trophyLoaded`, and the tab-click
+        // path that would normally load them fired while `result` was still the
+        // previous (or nil) one. Triggering here — after the parse has been
+        // adopted — is the only point where both the tab and the data exist.
+        if selectedTab == .trophies {
+            loadTrophiesIfNeeded()
+        }
         pushHistory(url)
     }
 
@@ -247,9 +255,13 @@ final class PkgViewModel: ObservableObject {
 
 
     func loadTrophiesIfNeeded() {
+        // Do NOT latch `trophyLoaded` before there is a result: this can run
+        // while the async parse is still in flight (the tab is set at launch),
+        // and latching then would make every later call — including the one
+        // from `adopt` once the data exists — a no-op.
+        guard let res = result else { return }
         guard !trophyLoaded else { return }
         trophyLoaded = true
-        guard let res = result else { return }
         let packs = res.entries.filter { $0.isTrophyPack }
         guard let entry = Self.bestPack(packs) else {
             trophyStatus = Message("trophy.msg.none")

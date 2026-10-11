@@ -14,8 +14,14 @@ let package = Package(
     defaultLocalization: "en",
     platforms: [.macOS(.v12)],
     targets: [
+        // Thin wrapper over the system libz (zlib) — the Apple Compression
+        // framework's COMPRESSION_ZLIB is broken in the 26.x SDK and only
+        // emits a ~1:1 partial inflate, so PFSC blocks must go through libz
+        // directly.
+        .target(name: "CZlib", path: "CZlib", publicHeadersPath: "include"),
         .executableTarget(
             name: "PkgViewerMac",
+            dependencies: ["CZlib"],
             path: "Sources",
             exclude: ["Core/ucp_extract.py"],
             // .process (not .copy) so SwiftPM compiles the .lproj directories

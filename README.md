@@ -1,5 +1,7 @@
 # PKG Viewer — macOS
 
+English · [简体中文](README.zh-CN.md)
+
 <img width="940" height="648" alt="image" src="https://github.com/user-attachments/assets/31085614-f2e9-48f6-bdab-86c661ea260d" />
 
 
@@ -18,10 +20,10 @@ learned from.
 
 ## Install
 
-Download `PkgViewer-1.2.1-universal.zip` from the [releases](https://github.com/carlchina/PkgViewerMac/releases), then:
+Download `PkgViewer-1.2.2-universal.zip` from the [releases](https://github.com/carlchina/PkgViewerMac/releases), then:
 
 ```bash
-unzip PkgViewer-1.2.1-universal.zip
+unzip PkgViewer-1.2.2-universal.zip
 xattr -r -d com.apple.quarantine PkgViewer.app     # see the note below
 open PkgViewer.app
 ```
@@ -66,7 +68,7 @@ ARCHS=x86_64 ./build.sh         # Intel only
 The script verifies the architectures in the finished binary against `ARCHS`
 and fails if they do not match, so a single-arch result cannot ship unnoticed.
 
-Each build bumps the number in parentheses after the version (`1.2.1 (1)`), so a
+Each build bumps the number in parentheses after the version (`1.2.2 (22)`), so a
 screenshot or a bug report can be tied to an exact binary. The counter is read
 back from the previous bundle, which means a fresh clone starts at `1` and a
 deleted `build/` restarts there too. For a release, freeze it:
@@ -87,12 +89,12 @@ BUILD=42 ./build.sh        # set an exact one
 | PS5 | bare `.ucp` / `.trp` | trophy archives read on their own |
 | — | game folders | `sce_sys/param.json`, `PS3_GAME/`, NPDRM extracts |
 | PS5 | `.ffpkg` | UFS2 image — metadata and key art |
-| PS5 | `.ffpfsc` | not supported — needs the mkpfs decompressor |
+| PS5 | `.ffpfsc` | PFS image wrapping a compressed `pfs_image.dat` — metadata and key art |
 | Switch | `.nsp`, `.xci` | packages and gamecard images |
 | Switch | `.nsz`, `.xcz` | the compressed forms of the above |
 
-The one unsupported format, `.ffpfsc`, reports the reason in the UI rather
-than failing silently.
+`.ffpfsc` is read in-process: the PFS inode table and the compressed inner image
+are decoded on demand, so the multi-gigabyte payload is never unpacked to disk.
 
 Switch metadata comes from the package's `cnmt.xml` or the binary CNMT inside
 its Meta NCA. Installing `prod.keys` at `~/.switch/prod.keys` additionally
@@ -204,6 +206,13 @@ This port exists because of, and was built by reading:
   field offsets, header versions, entry sizes — and for the config/text split in
   PS5 trophy metadata. Those offsets were wrong here until they were checked
   against this work; the comments at `Trophy.swift` cite them.
+- **[PSBrew/MkPFS](https://github.com/PSBrew/MkPFS)** — the reference for the
+  **`.ffpfsc` PFS + PFSC layout**: the outer PFS inode table, the super-root
+  `uroot` tree, and the PFSC block-offset table with its zlib-compressed inner
+  `pfs_image.dat`. The original pkg-viewer shelled out to mkpfs for this format;
+  here it is a self-contained Swift reader (`PFS.swift`) that decodes blocks
+  lazily via system zlib, and mkpfs's CLI was used to cross-check the reader
+  against real images.
 - **[psdevwiki](https://psdev.wiki)** and the wider homebrew scene for the NPDRM
   and ESFM format documentation, including the public trophy master key.
 
